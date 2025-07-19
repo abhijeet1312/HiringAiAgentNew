@@ -1,0 +1,85 @@
+
+fastapi
+uvicorn
+
+# Data models and validation
+pydantic
+
+# Machine Learning and AI
+
+
+huggingface_hub
+langchain
+langchain_community
+langchain_google_genai
+langchain-huggingface
+
+
+
+# Data processing
+pandas
+numpy
+pypdf
+scikit-learn
+docx2txt
+
+pdfminer.six 
+PyPDF2
+chardet 
+openai>=1.0.0
+
+# Environment and configuration
+python-dotenv
+
+# File handling and storage
+python-multipart
+azure-storage-blob
+boto3
+
+# Communication services
+twilio
+
+
+# Database
+supabase
+
+# Text processing
+requests
+
+
+#azure
+azure-functions-durable
+azure-functions
+
+# fastapi
+# uvicorn
+# pydantic
+# faiss-cpu
+# sentence-transformers
+# huggingface_hub
+# python-dotenv
+# numpy
+
+# langchain
+# langchain_community
+# langgraph
+# langserve[all]
+# langchain-ollama
+# python-dotenv
+# langchain_google_genai
+# pandas
+# sentence-transformers
+# pypdf
+# huggingface_hub
+# langchain-huggingface
+# whisper
+# langchain-ollama
+# cloudinary
+# boto3==1.34.0
+# python-multipart==0.0.6
+# pdfplumber
+# docx2txt
+# twilio
+# librosa
+# supabase
+# azure-storage-blob

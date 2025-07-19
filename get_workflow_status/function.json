@@ -1,0 +1,22 @@
+{
+    "scriptFile": "__init__.py",
+    "entryPoint": "get_workflow_status",
+    "bindings": [{
+            "authLevel": "function",
+            "type": "httpTrigger",
+            "direction": "in",
+            "name": "req",
+            "methods": ["post"]
+        },
+        {
+            "type": "http",
+            "direction": "out",
+            "name": "$return"
+        },
+        {
+            "name": "starter",
+            "type": "durableClient",
+            "direction": "in"
+        }
+    ]
+}
