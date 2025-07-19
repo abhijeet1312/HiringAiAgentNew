@@ -1,0 +1,23 @@
+{
+    "scriptFile": "__init__.py",
+    "entryPoint": "start_hiring_workflow",
+    "bindings": [{
+            "authLevel": "function",
+            "type": "httpTrigger",
+            "direction": "in",
+            "name": "req",
+            "methods": ["post"],
+            "route": "start-hiring-workflow"
+        },
+        {
+            "type": "http",
+            "direction": "out",
+            "name": "$return"
+        },
+        {
+            "name": "starter",
+            "type": "durableClient",
+            "direction": "in"
+        }
+    ]
+}

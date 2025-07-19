@@ -1,0 +1,9 @@
+{
+    "scriptFile": "__init__.py",
+    "entryPoint": "send_final_emails_activity",
+    "bindings": [{
+        "name": "email_data",
+        "type": "activityTrigger",
+        "direction": "in"
+    }]
+}
