@@ -37,7 +37,7 @@ def get_score_category(score: int) -> str:
     else:
         return "Below Average"
 
-def screen_single_resume_activity(context):
+def main(context):
     """
     Screens a single resume using CandidateScreeningAgent with batch processing
 
@@ -186,41 +186,14 @@ def screen_single_resume_activity(context):
             phone_number = extract_phone_number(resume_text)
             
             # Determine status based on threshold (similar to KMeans logic in batch)
-            overall_score = assessment.get("overall_fit_score", 0)
-            status = "PASS" if overall_score >= voice_interview_threshold else "FAIL"
-            qualifies_for_voice = overall_score >= voice_interview_threshold
+            overall_fit_score = assessment.get("overall_fit_score", 0)
+            status = "PASS" if overall_fit_score >= voice_interview_threshold else "FAIL"
+            qualifies_for_voice = overall_fit_score >= voice_interview_threshold
             
             # IMPROVED: Standardize recommendation based on score and assessment
             original_recommendation = assessment.get("recommendation", "Not Recommended")
             
-            # Map various recommendation formats to standardized values
-            recommendation_mapping = {
-                "potential match": "Potential Match",
-                "strong match": "Strong Match", 
-                "excellent match": "Excellent Match",
-                "good match": "Good Match",
-                "recommended": "Recommended",
-                "highly recommended": "Highly Recommended",
-                "yes": "Yes",
-                "no": "No",
-                "not recommended": "Not Recommended",
-                "reject": "Reject"
-            }
-            
-            # Standardize recommendation
-            standardized_recommendation = recommendation_mapping.get(
-                original_recommendation.lower(), 
-                original_recommendation
-            )
-            
-            # If score is high but recommendation is low, adjust recommendation
-            if overall_score >= voice_interview_threshold and standardized_recommendation in ["Not Recommended", "Reject", "No"]:
-                standardized_recommendation = "Potential Match"
-            elif overall_score < voice_interview_threshold and standardized_recommendation in ["Recommended", "Yes", "Strong Match"]:
-                standardized_recommendation = "Not Recommended"
-            
-            # Prepare result with comprehensive data matching batch processing format
-            # result={"abhijeet":"Srivastava"}
+            #
             result = {
                 "resume_url": resume_url,
                 "resume_index": resume_index,
@@ -228,23 +201,13 @@ def screen_single_resume_activity(context):
                 "chat_id": chat_id,
                 "job_description_url": job_desc_url,
                 "candidate_name": assessment.get("candidate_name", "Unknown"),
-                "recommendation": standardized_recommendation,  # FIXED: Use standardized recommendation
                 "candidate_email": assessment.get("candidate_email", ""),
                 "candidate_phone": phone_number or assessment.get("candidate_phone", ""),
+                "overall_fit_score":overall_fit_score,
                 
-                # Assessment details
-                
-                # Status and qualification flags
                 "status": status,
-                "qualifies_for_voice_interview": qualifies_for_voice,
-                "voice_interview_threshold": voice_interview_threshold,
-                "score_category": get_score_category(overall_score),
                 
-                # Debug fields
-                "original_recommendation": original_recommendation,  # For debugging
-                "score_vs_recommendation_aligned": (overall_score >= voice_interview_threshold) == (standardized_recommendation not in ["Not Recommended", "Reject", "No"]),
                 
-                # Preview fields for debugging
                
             }
             

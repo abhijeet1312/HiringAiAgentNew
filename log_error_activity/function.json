@@ -1,9 +1,0 @@
-{
-    "scriptFile": "__init__.py",
-    "entryPoint": "main",
-    "bindings": [{
-        "name": "context",
-        "type": "activityTrigger",
-        "direction": "in"
-    }]
-}

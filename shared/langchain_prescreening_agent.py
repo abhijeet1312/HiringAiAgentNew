@@ -1,4 +1,3 @@
-
 # Modified PreScreeningAgent class with Azure OpenAI Whisper
 
 from langchain.agents import Tool, AgentExecutor, LLMSingleActionAgent
@@ -13,7 +12,6 @@ from requests.auth import HTTPBasicAuth
 warnings.filterwarnings("ignore")
 import os
 from twilio.rest import Client
-from supabase_client import supabase
 
 # Azure OpenAI imports
 from openai import AzureOpenAI
@@ -77,54 +75,6 @@ class PreScreeningAgent:
         
         # Create agent
         self.agent = self._create_agent()
-    # def _create_agent(self):
-    #     prompt_template = """
-    #     You are an AI recruitment assistant specializing in candidate pre-screening.
-        
-    #     Available tools: {tools}
-    #     Tool names: {tool_names}
-        
-    #     Current conversation:
-    #     {chat_history}
-        
-    #     Human: {input}
-        
-    #     Think step by step:
-    #     Thought: I need to understand what the human wants
-    #     Action: [tool_name]
-    #     Action Input: [input_to_tool]
-    #     Observation: [result_from_tool]
-    #     ... (repeat Thought/Action/Action Input/Observation as needed)
-    #     Thought: I now know the final answer
-    #     Final Answer: [final_response]
-        
-    #     {agent_scratchpad}
-    #     """
-        
-    #     class CustomPromptTemplate(StringPromptTemplate):
-    #         template: str
-    #         tools: List[Tool]
-            
-    #         def format(self, **kwargs) -> str:
-    #             kwargs['tools'] = '\n'.join([f"{tool.name}: {tool.description}" for tool in self.tools])
-    #             kwargs['tool_names'] = ', '.join([tool.name for tool in self.tools])
-    #             return self.template.format(**kwargs)
-        
-    #     prompt = CustomPromptTemplate(
-    #         template=prompt_template,
-    #         tools=self.tools,
-    #         input_variables=["input", "chat_history", "agent_scratchpad"]
-    #     )
-    #     llm_chain = LLMChain(llm=self.llm, prompt=prompt)
-        
-    #     return LLMSingleActionAgent(
-    #         llm_chain=llm_chain,
-    #         output_parser=ReActSingleInputOutputParser(),
-    #         prompt=prompt,
-    #         stop=["\nObservation:"],
-    #         allowed_tools=[tool.name for tool in self.tools]
-    #     )
-    
     
     def _create_agent(self):
      from langchain_core.language_models.llms import LLM
@@ -213,31 +163,6 @@ class PreScreeningAgent:
         stop=["\nObservation:"],
         allowed_tools=[tool.name for tool in self.tools]
     )
-    # def generate_screening_questions(self, job_description: str) -> List[str]:
-        
-    #     """Generate job-specific screening questions using free local LLM"""
-        
-    #     prompt = f"""
-    #     Generate exactly 2 specific screening questions for this job:
-        
-    #     Job Description: {job_description}
-        
-    #     Questions should be:
-    #     1. Technical/skill-based
-    #     2. Experience-focused
-    #     3. Scenario-based
-        
-    #     Format: Return only questions, one per line.
-    #     """
-    #     # print(prompt)
-    #     response = self.llm.invoke(prompt)
-    #     # print(response)
-    #     # questions = [q.strip() for q in response.split('\n') if q.strip()]
-    #     questions = [q.strip() for q in response.content.split('\n') if q.strip()]
-
-    #     # print(questions)
-    #     return questions[:3]  # Ensure exactly 3 questions
-    
     def generate_screening_questions(self, job_description: str) -> List[str]:
      """Generate job-specific screening questions using Azure OpenAI"""
     
@@ -358,7 +283,7 @@ class PreScreeningAgent:
             if len(audio_content) < 100:
                 raise ValueError(f"Audio data too small ({len(audio_content)} bytes) - likely corrupted or empty")
 
-            print(f"📊 Downloaded {len(audio_content)} bytes of audio data")
+            print(f"Downloaded {len(audio_content)} bytes of audio data")
 
           
             audio_buffer = io.BytesIO(audio_content)
@@ -367,7 +292,7 @@ class PreScreeningAgent:
 
             try:
                 # Transcribe using Azure OpenAI Whisper
-                print("🎤 Transcribing audio with Azure OpenAI...")
+                print("Transcribing audio with Azure OpenAI...")
                 
                 # with open(temp_audio_file_path, "rb") as audio_file:
                 result = self.whisper_client.audio.transcriptions.create(
@@ -376,15 +301,15 @@ class PreScreeningAgent:
                         language="en"  # Optional: specify language
                     )
                 
-                print("✅ Transcription completed successfully!")
+                print("Transcription completed successfully!")
                 return result.text.strip()
             except Exception as e:
-                print(f"❌ Azure OpenAI transcription error: {e}")
+                print(f"Azure OpenAI transcription error: {e}")
                 print(f"Error type: {type(e).__name__}")
                 return ""
                              
         except Exception as e:
-            print(f"❌ Transcription error: {e}")
+            print(f"Transcription error: {e}")
             print(f"Error type: {type(e).__name__}")
             return ""
 
@@ -429,45 +354,6 @@ class PreScreeningAgent:
         print(f"Error evaluating answer: {e}")
         return 0.0
       
-    # def evaluate_answer(self, question: str, answer: str) -> float:
-    #     """Evaluate answer using free local LLM"""
-    #     print("inside evaluate answer")
-    #     if not answer.strip():
-    #         return 0.0
-        
-    #     prompt = f"""
-    #     Evaluate this interview answer on a scale of 0-10:
-        
-    #     Question: {question}
-    #     Answer: {answer}
-        
-    #     Consider:
-    #     - Relevance to question
-    #     - Technical accuracy
-    #     - Communication clarity
-    #     - Experience depth
-        
-    #     Return only a number between 0-10:
-    #     """
-        
-    #     response = self.llm.invoke(prompt)
-    #     print("response of question and answer",response)
-        
-    #     # Extract the actual content (the string '6', for example)
-    #     if hasattr(response, "content"):
-    #       answer_text = response.content
-    #     else:
-    #       answer_text = str(response)  # fallback
-        
-        
-        
-    #     try:
-    #         # Extract number from response
-    #         score_str = ''.join(filter(str.isdigit, answer_text.split()[0]))
-    #         score = float(score_str) if score_str else 0.0
-    #         return min(max(score, 0.0), 10.0)  # Clamp between 0-10
-    #     except:
-    #         return 0.0
     
 #    
     def wait_for_responses(self, session_id: str, num_questions: int, timeout: int = 300, webhook_base_url: str = "https://newaiprescreeningwebhook-dkcxc6d5e9ame4a2.centralindia-01.azurewebsites.net"):
@@ -476,8 +362,8 @@ class PreScreeningAgent:
        import time
     
        start_time = time.time()
-       print(f"⏳ Waiting for {num_questions} responses for session {session_id}...")
-       print(f"🌐 Using webhook URL: {webhook_base_url}")
+       print(f"Waiting for {num_questions} responses for session {session_id}...")
+       print(f"Using webhook URL: {webhook_base_url}")
     
        while (time.time() - start_time) < timeout:
         try:
@@ -493,11 +379,11 @@ class PreScreeningAgent:
                     progress = status_data.get("progress_percentage", 0)
                     status = status_data.get("status", "unknown")
                     
-                    print(f"📊 Progress: {completed_questions}/{total_questions} ({progress:.1f}%) - Status: {status}")
+                    print(f"Progress: {completed_questions}/{total_questions} ({progress:.1f}%) - Status: {status}")
                     
                     # Check if interview is completed
                     if status == "completed" or completed_questions >= num_questions:
-                        print(f"✅ Interview completed! Getting responses...")
+                        print(f"Interview completed! Getting responses...")
                         
                         # Get all responses
                         responses_response = requests.get(f"{webhook_base_url}/responses/{session_id}", timeout=10)
@@ -507,46 +393,46 @@ class PreScreeningAgent:
                             
                             if responses_data.get("success"):
                                 responses = responses_data.get("responses", [])
-                                print(f"🎉 Successfully retrieved {len(responses)} responses!")
+                                print(f"Successfully retrieved {len(responses)} responses!")
                                 
                                 # Clean up session from webhook memory
                                 try:
                                     cleanup_response = requests.delete(f"{webhook_base_url}/session/{session_id}", timeout=5)
                                     if cleanup_response.status_code == 200:
-                                        print(f"🧹 Session {session_id} cleaned up from webhook memory")
+                                        print(f"Session {session_id} cleaned up from webhook memory")
                                 except Exception as e:
-                                    print(f"⚠️ Failed to cleanup session: {e}")
+                                    print(f"Failed to cleanup session: {e}")
                                 
                                 return responses
                             else:
-                                print(f"❌ Failed to get responses: {responses_data.get('error', 'Unknown error')}")
+                                print(f"Failed to get responses: {responses_data.get('error', 'Unknown error')}")
                         else:
-                            print(f"❌ HTTP error getting responses: {responses_response.status_code}")
-                            print(f"🌐 Response content: {responses_response.text}")
+                            print(f"HTTP error getting responses: {responses_response.status_code}")
+                            print(f"Response content: {responses_response.text}")
                     
                     # Show progress every 30 seconds
                     elapsed = time.time() - start_time
                     if int(elapsed) % 30 == 0 and elapsed > 0:
-                        print(f"⏰ Still waiting... {elapsed:.0f}s elapsed")
+                        print(f"Still waiting... {elapsed:.0f}s elapsed")
                 
                 else:
-                    print(f"❌ Status API error: {status_data.get('error', 'Unknown error')}")
+                    print(f"Status API error: {status_data.get('error', 'Unknown error')}")
             
             else:
-                print(f"❌ HTTP error getting status: {status_response.status_code}")
-                print(f"🌐 Response content: {status_response.text}")
+                print(f"HTTP error getting status: {status_response.status_code}")
+                print(f"Response content: {status_response.text}")
                 
         except requests.exceptions.RequestException as e:
-            print(f"🌐 Network error calling webhook API: {e}")
+            print(f"Network error calling webhook API: {e}")
         except Exception as e:
-            print(f"❌ Unexpected error: {e}")
+            print(f"Unexpected error: {e}")
         
         # Wait before next check
         time.sleep(5)  # Check every 5 seconds
     
     # Timeout reached
        elapsed = time.time() - start_time
-       print(f"⚠️ Timeout reached after {elapsed:.0f}s. Attempting to get partial responses...")
+       print(f"Timeout reached after {elapsed:.0f}s. Attempting to get partial responses...")
     
     # Try to get whatever responses are available
        try:
@@ -555,12 +441,12 @@ class PreScreeningAgent:
             responses_data = responses_response.json()
             if responses_data.get("success"):
                 responses = responses_data.get("responses", [])
-                print(f"📝 Retrieved {len(responses)} partial responses")
+                print(f"Retrieved {len(responses)} partial responses")
                 return responses
        except Exception as e:
-        print(f"❌ Failed to get partial responses: {e}")
+        print(f"Failed to get partial responses: {e}")
     
-       print(f"❌ No responses could be retrieved for session {session_id}")
+       print(f"No responses could be retrieved for session {session_id}")
        return []
 
 
@@ -611,11 +497,11 @@ class PreScreeningAgent:
             print(f"{'='*50}")
             
             # Trigger call
-            print("🔄 Initiating call...")
+            print("Initiating call...")
             call_result = self.trigger_twilio_call(candidate, questions,"1234")
             
             if "error" in call_result:
-                print(f"❌ Call failed: {call_result['error']}")
+                print(f"Call failed: {call_result['error']}")
                 results.append({
                     "candidate_id": candidate_id,
                     "name": candidate_name,
@@ -626,23 +512,23 @@ class PreScreeningAgent:
                 continue
             
             call_sid = call_result.get("call_sid")
-            print(f"📞 Call initiated successfully. SID: {call_sid}")
+            print(f"Call initiated successfully. SID: {call_sid}")
             
             # Wait a bit for call to connect
-            print("⏳ Waiting for call to connect...")
+            print("Waiting for call to connect...")
             time.sleep(10)
             
             # Check call status
             if call_sid:
                 call_status = self.check_call_status(call_sid)
-                print(f"📊 Call status: {call_status}")
+                print(f"Call status: {call_status}")
             
             # Wait for responses with longer timeout
-            print(f"🎧 Waiting for {len(questions)} responses...")
+            print(f"Waiting for {len(questions)} responses...")
             responses = self.wait_for_responses(call_result.get("session_id"), len(questions), timeout=300)  # 5 minutes
             
             if not responses:
-                print(f"❌ No responses received for {candidate_name}")
+                print(f"No responses received for {candidate_name}")
                 results.append({
                     "candidate_id": candidate_id,
                     "name": candidate_name,
@@ -652,7 +538,7 @@ class PreScreeningAgent:
                 })
                 continue
             
-            print(f"✅ Received {len(responses)} responses, processing...")
+            print(f"Received {len(responses)} responses, processing...")
             
             # Process responses
             scores = []
@@ -662,12 +548,12 @@ class PreScreeningAgent:
                 if i < len(questions):
                     audio_url = response.get("audio_url", "")
                     if audio_url:
-                        print(f"🎵 Transcribing audio for question {i+1}...")
+                        print(f"Transcribing audio for question {i+1}...")
                         transcript = self.transcribe_audio(audio_url)
-                        print(f"📝 Transcript: {transcript[:100]}...")
+                        print(f"Transcript: {transcript[:100]}...")
                         
                         score = self.evaluate_answer(questions[i], transcript)
-                        print(f"📊 Score for question {i+1}: {score}/10")
+                        print(f"Score for question {i+1}: {score}/10")
                         
                         scores.append(score)
                         transcripts.append({
@@ -679,9 +565,9 @@ class PreScreeningAgent:
             avg_score = sum(scores) / len(scores) if scores else 0.0
             qualified = avg_score >= 2.0
             
-            print(f"🎯 Final Results for {candidate_name}:")
+            print(f"Final Results for {candidate_name}:")
             print(f"   Average Score: {avg_score:.2f}/10")
-            print(f"   Qualified: {'✅ YES' if qualified else '❌ NO'}")
+            print(f"   Qualified: {'YES' if qualified else 'NO'}")
             
             results.append({
                 "candidate_id": candidate_id,
@@ -719,7 +605,7 @@ class PreScreeningAgent:
         }
         
       except Exception as e:
-        print(f"❌ Pre-screening failed with error: {str(e)}")
+        print(f"Pre-screening failed with error: {str(e)}")
         import traceback
         traceback.print_exc()
         return {"error": f"Pre-screening failed: {str(e)}"}
@@ -782,7 +668,3 @@ if __name__ == "__main__":
     
     result = agent.run_pre_screening(json.dumps(test_input))
     print(json.dumps(result, indent=2))
-    
-    
-    
-    

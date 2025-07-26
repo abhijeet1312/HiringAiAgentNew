@@ -1,9 +1,0 @@
-{
-    "scriptFile": "__init__.py",
-    "entryPoint": "trigger_voice_interviews_activity",
-    "bindings": [{
-        "name": "voice_data",
-        "type": "activityTrigger",
-        "direction": "in"
-    }]
-}

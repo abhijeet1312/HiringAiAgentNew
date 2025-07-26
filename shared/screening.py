@@ -9,7 +9,6 @@ load_dotenv()
 from jai import send_bulk_email 
 
 import json
-from huggingface_hub import InferenceClient
 from langchain.output_parsers import PydanticOutputParser
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
