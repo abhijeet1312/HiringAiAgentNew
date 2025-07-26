@@ -1,4 +1,4 @@
-name: Deploy Python Azure Function App
+name: Deploy Azure Function App (Python) using OIDC
 
 on:
   push:
@@ -6,7 +6,13 @@ on:
       - main
   workflow_dispatch:
 
+permissions:
+  id-token: write
+  contents: read
+
 env:
+  AZURE_FUNCTIONAPP_NAME: "HiringAgentaiMultipleHiring"
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: "."
   PYTHON_VERSION: "3.10"
 
 jobs:
@@ -14,111 +20,25 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install dependencies (local)
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Log in to Azure
+      - name: Login to Azure
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_E477DE97BA1A4CE9B4E43D1CE2CF1BE3 }}
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_0C4002EDCC17451986A2F5EF2FC9C1C6 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_B8807E494C724C5C9A22CF6432EE2262 }}
 
-      - name: Deploy Azure Function App using remote build
+      - name: Deploy to Azure Functions with remote build
         uses: Azure/functions-action@v1
         with:
-          app-name: "HiringAgentaiMultipleHiring"
-          slot-name: "Production"
-          package: "."
-# # Docs for the Azure Web Apps Deploy action: https://github.com/azure/functions-action
-# # More GitHub Actions for Azure: https://github.com/Azure/actions
-# # More info on Python, GitHub Actions, and Azure Functions: https://aka.ms/python-webapps-actions
-
-# name: Build and deploy Python project to Azure Function App - HiringAgentaiMultipleHiring
-
-# on:
-#   push:
-#     branches:
-#       - main
-#   workflow_dispatch:
-
-# env:
-#   AZURE_FUNCTIONAPP_PACKAGE_PATH: '.' # set this to the path to your web app project, defaults to the repository root
-#   PYTHON_VERSION: '3.10' # set this to the python version to use (supports 3.6, 3.7, 3.8)
-
-# jobs:
-#   build:
-#     runs-on: ubuntu-latest
-#     permissions:
-#       contents: read #This is required for actions/checkout
-
-#     steps:
-#       - name: Checkout repository
-#         uses: actions/checkout@v4
-
-#       - name: Setup Python version
-#         uses: actions/setup-python@v5
-#         with:
-#           python-version: ${{ env.PYTHON_VERSION }}
-
-#       - name: Create and start virtual environment
-#         run: |
-#           python -m venv venv
-#           source venv/bin/activate
-
-#       - name: Install dependencies
-#         run: pip install -r requirements.txt
-
-#       # Optional: Add step to run tests here
-
-#       - name: Zip artifact for deployment
-#         run: zip release.zip ./* -r
-
-#       - name: Upload artifact for deployment job
-#         uses: actions/upload-artifact@v4
-#         with:
-#           name: python-app
-#           path: |
-#             release.zip
-#             !venv/
-
-#   deploy:
-#     runs-on: ubuntu-latest
-#     needs: build
-#     permissions:
-#       id-token: write #This is required for requesting the JWT
-#       contents: read #This is required for actions/checkout
-
-#     steps:
-#       - name: Download artifact from build job
-#         uses: actions/download-artifact@v4
-#         with:
-#           name: python-app
-
-#       - name: Unzip artifact for deployment
-#         run: unzip release.zip
-
-#       - name: Login to Azure
-#         uses: azure/login@v2
-#         with:
-#           client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_E477DE97BA1A4CE9B4E43D1CE2CF1BE3 }}
-#           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_0C4002EDCC17451986A2F5EF2FC9C1C6 }}
-#           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_B8807E494C724C5C9A22CF6432EE2262 }}
-
-#       - name: 'Deploy to Azure Functions'
-#         uses: Azure/functions-action@v1
-#         id: deploy-to-function
-#         with:
-#           app-name: 'HiringAgentaiMultipleHiring'
-#           slot-name: 'Production'
-#           package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+          app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
+          package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+          scm-do-build-during-deployment: true
+          enable-oryx-build: true
