@@ -1,6 +1,5 @@
 {
     "scriptFile": "__init__.py",
-    "entryPoint": "screen_single_resume_activity",
     "bindings": [{
         "name": "context",
         "type": "activityTrigger",

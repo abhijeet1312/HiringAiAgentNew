@@ -1,8 +1,8 @@
 {
     "scriptFile": "__init__.py",
-    "entryPoint": "trigger_single_voice_interview_activity",
+    "entryPoint": "main",
     "bindings": [{
-        "name": "context",
+        "name": "input_data",
         "type": "activityTrigger",
         "direction": "in"
     }]

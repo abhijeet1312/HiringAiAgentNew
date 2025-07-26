@@ -1,9 +1,9 @@
+#triggertrigger_single_voice_interview_activity
 import logging
 import json
 import azure.functions as func
 from shared.langchain_prescreening_agent import create_prescreening_agent  # Adjust import as needed
-
-def trigger_single_voice_interview_activity(context: func.Context) -> str:
+def main(input_data: dict) -> str:
     """
     Triggers voice interview for a single candidate
 
@@ -20,13 +20,11 @@ def trigger_single_voice_interview_activity(context: func.Context) -> str:
     """
     try:
         # Get the activity input
-        data = context.get_input()
-        
-        candidate = data["candidate"]
-        job_description = data["job_description"]
-        chat_id = data.get("chat_id", "unknown")
-
-        logging.info(f"Running voice interview for candidate {candidate.get('candidate_name')}")
+        candidate = input_data["candidate"]
+        job_description = input_data["job_description_text"]
+        chat_id = input_data.get("chat_id", "unknown")
+        logging.info(candidate)
+        logging.info(f"Running voice interview for candidate {candidate.get('name')}")
 
         agent = create_prescreening_agent()
 
@@ -43,7 +41,8 @@ def trigger_single_voice_interview_activity(context: func.Context) -> str:
 
         all_results = results.get("all_results", [])
         result = all_results[0] if all_results else {"error": "No result returned"}
-        return json.dumps(result)
+        # return json.dumps(result)
+        return result
 
     except Exception as e:
         logging.error(f"trigger_single_voice_interview_activity failed: {e}")

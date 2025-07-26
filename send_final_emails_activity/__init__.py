@@ -1,206 +1,55 @@
-# send_final_emails/__init__.py
-import azure.functions as func
-import azure.durable_functions as df
-import json
-import os
-import logging
-import smtplib
-from typing import Dict, List, Any, Optional
-import tempfile
-import requests
-from azure.storage.blob import BlobServiceClient
-import pandas as pd
-from datetime import datetime
-from dotenv import load_dotenv
-from langchain_google_genai import ChatGoogleGenerativeAI
 
-# Load environment variables
+import smtplib
+import os
+from dotenv import load_dotenv
+from langchain_openai import AzureChatOpenAI
+from langchain_core.prompts import ChatPromptTemplate
+
 load_dotenv()
 
-# Import your existing classes
-from shared.screening import CandidateScreeningAgent
-from shared.langchain_prescreening_agent import create_prescreening_agent
 
-
-def send_stage_emails(email_data: Dict) -> Dict:
-    """
-    Universal email sending function that handles all hiring stages
+def send_final_emails_activity(email_data:dict):
+    screening_email_input=email_data
+    import smtplib
+    import os
+    from langchain_openai import AzureChatOpenAI
+    recipients = screening_email_input["qualified_candidates"]
+    job_description = screening_email_input["job_description"]
+    current_stage = screening_email_input["current_stage"]
+    next_stage = screening_email_input["next_stage"]
     
-    Args:
-        email_data: {
-            "candidates": [...],  # List of candidate objects
-            "job_description_urls": [...],
-            "chat_id": "...",
-            "current_stage": "Resume Screening",  # Stage candidates just completed
-            "next_stage": "Voice Interview",      # Stage candidates are moving to
-            "email_type": "qualification|final"   # Type of email flow
-        }
-    
-    Returns:
-        {
-            "emails_sent": int,
-            "success": bool,
-            "details": "...",
-            "recipients": [...],
-            "hired_count": int (only for final emails),
-            "rejected_count": int (only for final emails)
-        }
-    """
-    try:
-        logging.info(f"Processing {email_data.get('email_type', 'qualification')} emails for chat_id: {email_data.get('chat_id')}")
+    recipients_email = [candidate["email"] for candidate in recipients]
         
-        # Extract and validate input data
-        candidates = email_data.get("candidates", [])
-        if not candidates:
-            return {"error": "No candidates provided"}
-        
-        job_description = _extract_job_description(email_data.get("job_description_urls", []))
-        current_stage = email_data.get("current_stage", "Current Stage")
-        next_stage = email_data.get("next_stage", "Next Stage")
-        email_type = email_data.get("email_type", "qualification")
-        
-        # Handle different email types
-        if email_type == "final":
-            return _send_final_decision_emails(candidates, job_description, current_stage, next_stage)
-        else:
-            return _send_qualification_emails(candidates, job_description, current_stage, next_stage)
-        
-    except Exception as e:
-        logging.error(f"Email sending failed: {e}")
-        return {"error": f"Email sending failed: {str(e)}"}
 
-
-def _extract_job_description(job_description_urls: List[str]) -> str:
-    """Extract job description from URLs or return placeholder"""
-    if job_description_urls:
-        return f"Job posting reference: {job_description_urls[0]}"
-    return "Position details as discussed"
-
-
-def _extract_candidate_emails(candidates: List[Dict]) -> List[str]:
-    """Extract valid email addresses from candidate objects"""
-    emails = []
-    for candidate in candidates:
-        email = candidate.get("candidate_email") or candidate.get("email")
-        if email and email.strip():
-            emails.append(email.strip())
-    return emails
-
-
-def _send_qualification_emails(candidates: List[Dict], job_description: str, current_stage: str, next_stage: str) -> Dict:
-    """Send emails to candidates who qualified for next stage"""
-    candidate_emails = _extract_candidate_emails(candidates)
+    # Email configuration
+    sender_email = os.getenv("ZOHOMAIL_EMAIL")
+    app_password = os.getenv("ZOHOMAIL_PASSWORD")
     
-    if not candidate_emails:
-        return {"error": "No candidate emails found"}
+    # Azure OpenAI configuration
+    azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT_CHAT")  # e.g., "https://your-resource.openai.azure.com/"
+    azure_api_key = os.getenv("AZURE_OPENAI_API_KEY")
+    azure_deployment = "gpt-35-turboo"  # Your deployment name
+    # azure_api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-15-preview")  # Default version
     
-    # Send bulk email
-    success = _send_bulk_email(
-        candidate_emails,
-        job_description,
-        current_stage,
-        next_stage
-    )
     
-    if success:
-        return {
-            "emails_sent": len(candidate_emails),
-            "success": True,
-            "details": f"Sent {current_stage} qualification emails to {len(candidate_emails)} candidates",
-            "recipients": candidate_emails
-        }
-    else:
-        return {"error": f"Failed to send {current_stage} qualification emails"}
-
-
-def _send_final_decision_emails(candidates: List[Dict], job_description: str, current_stage: str, next_stage: str) -> Dict:
-    """Send final decision emails (hire/reject)"""
-    # Separate hired and rejected candidates
-    hired_candidates = [c for c in candidates if c.get("final_status") == "HIRE"]
-    rejected_candidates = [c for c in candidates if c.get("final_status") == "REJECT"]
     
-    emails_sent = 0
-    
-    # Send emails to hired candidates
-    if hired_candidates:
-        hired_emails = _extract_candidate_emails(hired_candidates)
-        if hired_emails:
-            try:
-                success = _send_bulk_email(
-                    hired_emails,
-                    job_description,
-                    current_stage,
-                    "Job Offer - Next Steps"
-                )
-                if success:
-                    emails_sent += len(hired_emails)
-                    logging.info(f"Sent congratulations emails to {len(hired_emails)} candidates")
-            except Exception as e:
-                logging.error(f"Failed to send congratulations emails: {e}")
-    
-    # Send emails to rejected candidates
-    if rejected_candidates:
-        rejected_emails = _extract_candidate_emails(rejected_candidates)
-        if rejected_emails:
-            try:
-                success = _send_bulk_email(
-                    rejected_emails,
-                    job_description,
-                    current_stage,
-                    "Thank You for Your Interest"
-                )
-                if success:
-                    emails_sent += len(rejected_emails)
-                    logging.info(f"Sent rejection emails to {len(rejected_emails)} candidates")
-            except Exception as e:
-                logging.error(f"Failed to send rejection emails: {e}")
-    
-    return {
-        "emails_sent": emails_sent,
-        "success": True,
-        "details": f"Sent {emails_sent} final decision emails",
-        "hired_count": len(hired_candidates),
-        "rejected_count": len(rejected_candidates)
-    }
-
-
-def _send_bulk_email(recipients: List[str], job_description: str, current_stage: str, next_stage: str) -> bool:
-    """
-    Send bulk emails to multiple recipients using Gmail SMTP with AI-generated content.
-    
-    Args:
-        recipients: List of recipient email addresses
-        job_description: Job description text
-        current_stage: Current stage in hiring process
-        next_stage: Next stage in hiring process
-    
-    Returns:
-        bool: True if successful, False otherwise
-    """
-    sender_email = "shivamsrivastava2189@gmail.com"
-    app_password = os.getenv("Google_app_password")
-    API_KEY = os.getenv("GOOGLE_API_KEY")
-
-    # Initialize the AI model
-    model = ChatGoogleGenerativeAI(
-        model="models/gemini-2.0-flash",
-        api_key=API_KEY,
+    # Initialize Azure OpenAI model
+    model = AzureChatOpenAI(
+        azure_endpoint=azure_endpoint,
+        api_key=azure_api_key,
+        azure_deployment=azure_deployment,
+        api_version="2024-02-01",
         temperature=0.7
     )
 
-    # Create the prompt for email content generation
-    prompt = f"""
+    # Create prompt template
+    prompt_template = ChatPromptTemplate.from_template("""
     You are an HR assistant. Craft a professional, polite, and encouraging email to a job applicant.
     Inform them that they have successfully qualified the current stage of the hiring process.
 
-    Job Description:
-    {job_description}
-
-    Current Stage:
-    {current_stage}
-
-    Next Stage:
-    {next_stage}
+    Job Description: {job_description}
+    Current Stage: {current_stage}
+    Next Stage: {next_stage}
 
     Ensure the email includes:
     - A congratulatory tone
@@ -208,106 +57,43 @@ def _send_bulk_email(recipients: List[str], job_description: str, current_stage:
     - What the next stage involves
     - Next steps or instructions
     - Encouragement to prepare
-    - Professional email format with subject line
+    - Professional email format with subject and body
 
-    Keep it reusable and concise. Format as a complete email with Subject line.
-    """
+    Keep it reusable and concise.
+    """)
 
+    # Generate email content
     try:
-        # Generate email content using AI
-        response = model.invoke(prompt)
-        message = response.content if hasattr(response, "content") else response
+        chain = prompt_template | model
+        response = chain.invoke({
+            "job_description": job_description,
+            "current_stage": current_stage,
+            "next_stage": next_stage
+        })
         
-        # Send email via SMTP
-        with smtplib.SMTP('smtp.gmail.com', 587) as s:
-            s.starttls()
-            s.login(sender_email, app_password)
-            s.sendmail(sender_email, recipients, message)
-            logging.info(f"Email sent successfully to: {recipients}")
-            return True
+        message = response.content if hasattr(response, "content") else str(response)
+        
+        # Create proper email format
+        subject = f"Congratulations! You've Advanced to {next_stage} - {job_description}"
+        email_body = f"Subject: {subject}\n\n{message}"
+        
+        
+        
+    except Exception as e:
+        print(f"Error generating email content: {e}")
+        return
+
+    # Send email
+    try:
+        with smtplib.SMTP('smtp.zoho.in', 587) as server:
+            server.starttls()
+            server.login(sender_email, app_password)
+            
+            server.sendmail(sender_email, recipients_email, message)
+            
+            
+            print("Email sent successfully to:", recipients)
             
     except Exception as e:
-        logging.error(f"Error sending email: {e}")
-        return False
+        print(f"Error sending email: {e}")
 
-
-# Azure Function entry point - handles all email types
-def send_final_emails_activity(email_data: Dict) -> Dict:
-    """
-    Main Azure Function entry point that handles all email types
-    Auto-detects email type based on input data structure
-    
-    Args:
-        email_data: Can contain any of these patterns:
-        - qualified_candidates (screening emails)
-        - voice_qualified_candidates (voice interview emails)  
-        - final_recommendations (final decision emails)
-        - OR direct candidates list with email_type specified
-    """
-    try:
-        # Auto-detect email type and map data structure
-        if "final_recommendations" in email_data:
-            # Final decision emails
-            email_data.update({
-                "candidates": email_data.get("final_recommendations", []),
-                "current_stage": email_data.get("current_stage", "Final Interview Results"),
-                "next_stage": email_data.get("next_stage", "Next Steps"),
-                "email_type": "final"
-            })
-        elif "voice_qualified_candidates" in email_data:
-            # Voice interview qualification emails
-            email_data.update({
-                "candidates": email_data.get("voice_qualified_candidates", []),
-                "current_stage": email_data.get("current_stage", "Voice Interview"),
-                "next_stage": email_data.get("next_stage", "Final Review"),
-                "email_type": "qualification"
-            })
-        elif "qualified_candidates" in email_data:
-            # Screening qualification emails
-            email_data.update({
-                "candidates": email_data.get("qualified_candidates", []),
-                "current_stage": email_data.get("current_stage", "Resume Screening"),
-                "next_stage": email_data.get("next_stage", "Voice Interview"),
-                "email_type": "qualification"
-            })
-        # If email_type is already specified, use as-is
-        
-        return send_stage_emails(email_data)
-        
-    except Exception as e:
-        logging.error(f"Azure Function entry point error: {e}")
-        return {"error": f"Azure Function entry point error: {str(e)}"}
-
-
-# Convenience wrapper functions for direct calls (optional)
-def send_screening_emails_activity(email_data: Dict) -> Dict:
-    """Send emails to candidates who passed screening"""
-    email_data.update({
-        "candidates": email_data.get("qualified_candidates", []),
-        "current_stage": email_data.get("current_stage", "Resume Screening"),
-        "next_stage": email_data.get("next_stage", "Voice Interview"),
-        "email_type": "qualification"
-    })
-    return send_stage_emails(email_data)
-
-
-def send_voice_interview_emails_activity(email_data: Dict) -> Dict:
-    """Send emails to candidates who passed voice interviews"""
-    email_data.update({
-        "candidates": email_data.get("voice_qualified_candidates", []),
-        "current_stage": email_data.get("current_stage", "Voice Interview"),
-        "next_stage": email_data.get("next_stage", "Final Review"),
-        "email_type": "qualification"
-    })
-    return send_stage_emails(email_data)
-
-
-# Azure Functions entry points
-def main(req: func.HttpRequest) -> func.HttpResponse:
-    """Main entry point for HTTP-triggered function"""
-    try:
-        # This would handle HTTP requests if needed
-        return func.HttpResponse("Email service is running", status_code=200)
-    except Exception as e:
-        logging.error(f"HTTP function error: {e}")
-        return func.HttpResponse(f"Error: {str(e)}", status_code=500)

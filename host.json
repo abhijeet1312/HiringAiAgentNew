@@ -1,43 +1,15 @@
 {
-  "version": "2.0",
-  "extensionBundle": {
-    "id": "Microsoft.Azure.Functions.ExtensionBundle",
-    "version": "[3.*, 4.0.0)"
-  },
-  "functionTimeout": "00:15:00",
-  "logging": {
-    "logLevel": {
-      "default": "Information",
-      "Function": "Information",
-      "DurableTask": "Information"
-    }
-  },
-  "extensions": {
-    "http": {
-      "routePrefix": "api",
-      "maxConcurrentRequests": 20,
-      "maxOutstandingRequests": 30,
-      "dynamicThrottlesEnabled": true
+    "version": "2.0",
+    "logging": {
+        "applicationInsights": {
+            "samplingSettings": {
+                "isEnabled": true,
+                "excludedTypes": "Request"
+            }
+        }
     },
-    "durableTask": {
-      "hubName": "HiringTaskHub",
-      "storageProvider": {
-        "type": "AzureStorage",
-        "connectionStringName": "AzureWebJobsStorage"
-      },
-      "maxConcurrentActivityFunctions": 10,
-      "maxConcurrentOrchestratorFunctions": 5,
-      "extendedSessionsEnabled": true,
-      "extendedSessionIdleTimeoutInSeconds": 30
+    "extensionBundle": {
+        "id": "Microsoft.Azure.Functions.ExtensionBundle",
+        "version": "[2.*, 3.0.0)"
     }
-  },
-  "concurrency": {
-    "dynamicConcurrencyEnabled": true,
-    "snapshotPersistenceEnabled": true
-  },
-  "retry": {
-    "strategy": "fixedDelay",
-    "maxRetryCount": 3,
-    "delayInterval": "00:00:05"
-  }
 }
