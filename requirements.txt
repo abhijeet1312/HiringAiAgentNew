@@ -45,3 +45,7 @@ requests
 
 azure-functions
 azure-functions-durable
+
+
+# 🔒 Pin to GLIBC-compatible version to avoid Rust ABI issues
+cryptography<42.0
