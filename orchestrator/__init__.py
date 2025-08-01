@@ -3,6 +3,7 @@ import logging
 import azure.durable_functions as df
 from datetime import datetime
 from typing import List, Dict, Any
+from supabase_client import supabase
 from shared.azurestorage import (
     azure_config,
     extract_text_from_azure,
@@ -63,6 +64,25 @@ def orchestrator_function(context: df.DurableOrchestrationContext):
     # Fan-In: Execute all screening tasks in parallel (single yield)
     logging.info(f"Executing {len(screening_tasks)} screening tasks in parallel")
     screening_results = yield context.task_all(screening_tasks)
+    # logging.info(f"Screening tasks completed: {screening_results}results received")
+    # Extract only resume_url and overall_fit_score
+    screening_result_resume = [
+        {
+            "resume_url": item["resume_url"],
+            "score": item["overall_fit_score"]
+        }
+        for item in screening_results
+    ]
+    
+    response = (
+    supabase.table("screening")
+    .update({"screening_result_resumes": screening_result_resume})
+    .eq("chat_id", chat_id)
+    .execute()
+)
+    logging.info(f"Screening results updated in Supabase: {response}")
+    
+    # return screening_results
     logging.info("✅ All screening tasks completed")
     selected=[]
     not_selected=[]
@@ -73,8 +93,10 @@ def orchestrator_function(context: df.DurableOrchestrationContext):
             "name": candidate["candidate_name"],
             "email": candidate["candidate_email"],
             "phone": candidate["candidate_phone"],
-            "score": candidate["overall_fit_score"],
+            "screening_score": candidate["overall_fit_score"],
             "status": candidate["status"],
+            "resume_url": candidate["resume_url"],
+            "job_description_url": job_desc_url,
             "id":idx+1
         }
         
@@ -125,7 +147,28 @@ def orchestrator_function(context: df.DurableOrchestrationContext):
     except Exception as e:
         logging.error(f"❌ Error in voice interviews: {str(e)}")
         voice_results = []
-
+    voice_result_score = [
+        {
+            "resume_url": item["resume_url"],
+            "score": item["overall_score"]
+        }
+        for item in voice_results
+    ]
+    response = (
+    supabase.table("screening")
+    .update({"prescreening_result_resumes": voice_result_score})
+    .eq("chat_id", chat_id)
+    .execute()
+)
+    logging.info(f"PreScreening results updated in Supabase: {response}")
+    status=(
+        supabase.table("screening")
+        .update({"status": "completed"})
+        .eq("chat_id", chat_id)
+        .execute()
+    )
+    
+    # return voice_results
     # Filter only successful voice interview results
     successful_voice_results = []
     for result in voice_results:

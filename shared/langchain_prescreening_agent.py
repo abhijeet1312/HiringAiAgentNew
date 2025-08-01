@@ -578,7 +578,9 @@ class PreScreeningAgent:
                 "individual_scores": scores,
                 "responses": transcripts,
                 "qualified": qualified,
-                "call_sid": call_sid
+                "call_sid": call_sid,
+                "resume_url": candidate.get("resume_url", ""),
+                "job_description_url": data.get("job_description_url", "")
             })
         
         # Sort by score (highest first)
