@@ -2,7 +2,6 @@
 import smtplib
 import os
 from dotenv import load_dotenv
-from langchain_openai import AzureChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 
 load_dotenv()
