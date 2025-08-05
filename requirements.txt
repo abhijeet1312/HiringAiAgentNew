@@ -47,10 +47,9 @@ azure-functions
 azure-functions-durable
 
 
-# OpenTelemetry - Add these to fix StopIteration error
-opentelemetry-api>=1.20.0
-opentelemetry-sdk>=1.20.0
-opentelemetry-instrumentation>=0.41b0
+opentelemetry-api==1.23.0
+opentelemetry-sdk==1.23.0
+opentelemetry-instrumentation==0.44b0
 
 
 # 🔒 Pin to GLIBC-compatible version to avoid Rust ABI issues
