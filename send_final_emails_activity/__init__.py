@@ -1,23 +1,18 @@
-
 import smtplib
 import os
+from langchain_openai import AzureChatOpenAI
 from dotenv import load_dotenv
 from langchain_core.prompts import ChatPromptTemplate
-
 load_dotenv()
-
-
 def send_final_emails_activity(email_data:dict):
     screening_email_input=email_data
-    import smtplib
-    import os
-    from langchain_openai import AzureChatOpenAI
     recipients = screening_email_input["qualified_candidates"]
     job_description = screening_email_input["job_description"]
     current_stage = screening_email_input["current_stage"]
     next_stage = screening_email_input["next_stage"]
     
     recipients_email = [candidate["email"] for candidate in recipients]
+    recipients_names = [candidate["name"] for candidate in recipients]
         
 
     # Email configuration
@@ -45,6 +40,8 @@ def send_final_emails_activity(email_data:dict):
     prompt_template = ChatPromptTemplate.from_template("""
     You are an HR assistant. Craft a professional, polite, and encouraging email to a job applicant.
     Inform them that they have successfully qualified the current stage of the hiring process.
+    Include the following details:
+    Recipient: {candidate_name}
 
     Job Description: {job_description}
     Current Stage: {current_stage}
@@ -60,39 +57,64 @@ def send_final_emails_activity(email_data:dict):
 
     Keep it reusable and concise.
     """)
-
+    for candidate in recipients:
+        candidate_name= candidate["name"]
+        candidate_email=candidate["email"]
+        
+        
     # Generate email content
-    try:
-        chain = prompt_template | model
-        response = chain.invoke({
-            "job_description": job_description,
-            "current_stage": current_stage,
-            "next_stage": next_stage
-        })
-        
-        message = response.content if hasattr(response, "content") else str(response)
-        
-        # Create proper email format
-        subject = f"Congratulations! You've Advanced to {next_stage} - {job_description}"
-        email_body = f"Subject: {subject}\n\n{message}"
-        
-        
-        
-    except Exception as e:
-        print(f"Error generating email content: {e}")
-        return
+        try:
+            chain = prompt_template | model
+            response = chain.invoke({
+                "job_description": job_description,
+                "current_stage": current_stage,
+                "next_stage": next_stage,
+                "candidate_name": candidate_name,
+                
+            })
+            
+            message = response.content if hasattr(response, "content") else str(response)
+            
+            # # Create proper email format
+            subject = f"Congratulations! You've Advanced to {next_stage}"
+            email_body = f"{subject}\n\n{message}"
+            
+            
+            
+        except Exception as e:
+            print(f"Error generating email content: {e}")
+            return
 
-    # Send email
-    try:
-        with smtplib.SMTP('smtp.zoho.in', 587) as server:
-            server.starttls()
-            server.login(sender_email, app_password)
-            
-            server.sendmail(sender_email, recipients_email, message)
-            
-            
-            print("Email sent successfully to:", recipients)
-            
-    except Exception as e:
-        print(f"Error sending email: {e}")
+        # Send email
+        try:
+            with smtplib.SMTP('smtp.zoho.in', 587) as server:
+                server.starttls()
+                server.login(sender_email, app_password)
+                
+                server.sendmail(sender_email, candidate_email, email_body)
+                
+                
+                print("Email sent successfully to:", recipients)
+                
+        except Exception as e:
+            print(f"Error sending email: {e}")
 
+
+if __name__ == "__main__":
+    test_email_data = {
+        "qualified_candidates": [
+            {
+                "name": "Shivam Srivastava",
+                "email": "kanaksrivastava1970@gmail.com"
+            },
+            {
+                "name": "Abhijeet Srivastava",
+                "email": "abhijeetsrivastava2189@gmail.com"
+            }
+        ],
+        "job_description": "AI Research Intern",
+        "current_stage": "Resume Screening",
+        "next_stage": "Technical Interview"
+    }
+
+    send_final_emails_activity(test_email_data)
