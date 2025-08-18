@@ -54,3 +54,5 @@ opentelemetry-instrumentation==0.44b0
 
 # 🔒 Pin to GLIBC-compatible version to avoid Rust ABI issues
 cryptography<42.0
+
+
