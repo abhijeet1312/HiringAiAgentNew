@@ -28,6 +28,7 @@ def orchestrator_function(context: df.DurableOrchestrationContext):
     logging.info(f"Processing hiring workflow for chat_id: {chat_id}")
     logging.info(f"Total resumes to process: {len(resume_urls)}")
     logging.info(f"Total job descriptions: {len(job_description_urls)}")
+    
     job_desc_url = job_description_urls[0]  # Use first job description URL
     job_desc_blob_info = parse_azure_url_to_container_blob_path(job_desc_url)
     job_description_text = extract_text_from_azure(job_desc_blob_info['blob_path'])
@@ -37,7 +38,7 @@ def orchestrator_function(context: df.DurableOrchestrationContext):
         error_msg = "Invalid input: resume_urls and job_description_urls are required"
         logging.error(error_msg)
         
-        # Log error activity (yield required for activity calls)
+        # Log error activity
         yield context.call_activity("log_error_activity", {
             "chat_id": chat_id,
             "error": error_msg,
@@ -48,7 +49,7 @@ def orchestrator_function(context: df.DurableOrchestrationContext):
     # PHASE 2: RESUME SCREENING - Fan-Out/Fan-In Pattern
     logging.info("🚀 Starting resume screening phase")
     
-    # Collect screening tasks (no yield here - just collecting)
+    # Collect screening tasks
     screening_tasks = []
     for i, resume_url in enumerate(resume_urls):
         task_input = {
@@ -58,36 +59,42 @@ def orchestrator_function(context: df.DurableOrchestrationContext):
             "resume_index": i
         }
         logging.info(f"Creating screening task {i} for resume: {resume_url}")
-        # Append task without yielding
         screening_tasks.append(context.call_activity("resume_screening_activity", task_input))
     
-    # Fan-In: Execute all screening tasks in parallel (single yield)
+    # Fan-In: Execute all screening tasks in parallel
     logging.info(f"Executing {len(screening_tasks)} screening tasks in parallel")
     screening_results = yield context.task_all(screening_tasks)
-    # logging.info(f"Screening tasks completed: {screening_results}results received")
+    logging.info(f"Resume screening phase completed. Results: {screening_results}")
+    
     # Extract only resume_url and overall_fit_score
     screening_result_resume = [
         {
             "resume_url": item["resume_url"],
-            "score": item["overall_fit_score"]
+            "score": item["overall_fit_score"],
+            "candidate_name":item.get("candidate_name",""),
+            "candidate_email":item.get("candidate_email",""),
+            "candidate_phone": item.get("candidate_phone", "")
+            
         }
         for item in screening_results
     ]
     
+    # logging.info(f"Screening Result Resumes++++++++++++++++++++++++++++++++++++++++++++++++: {screening_result_resume}")
     response = (
-    supabase.table("screening")
-    .update({"screening_result_resumes": screening_result_resume})
-    .eq("chat_id", chat_id)
-    .execute()
-)
+        supabase.table("screening")
+        .update({"screening_result_resumes": screening_result_resume})
+        .eq("chat_id", chat_id)
+        .execute()
+    )
     logging.info(f"Screening results updated in Supabase: {response}")
     
-    # return screening_results
     logging.info("✅ All screening tasks completed")
-    selected=[]
-    not_selected=[]
-    score_threshold=4
-    idx=0
+    
+    selected = []
+    not_selected = []
+    score_threshold = 4
+    idx = 0
+    
     for candidate in screening_results:
         candidate_info = {
             "name": candidate["candidate_name"],
@@ -97,48 +104,48 @@ def orchestrator_function(context: df.DurableOrchestrationContext):
             "status": candidate["status"],
             "resume_url": candidate["resume_url"],
             "job_description_url": job_desc_url,
-            "id":idx+1
+            "id": idx + 1
         }
         
         if candidate["overall_fit_score"] > score_threshold:
             selected.append(candidate_info)
         else:
             not_selected.append(candidate_info)
-        
-    #phase 3 sending emails
-    screening_email_input = {
-                "qualified_candidates": selected,
-                "job_description": job_description_text,
-                "chat_id": chat_id,
-                "current_stage": "Resume Screening",
-                "next_stage": "Voice Interview"
-            }
-            
-    screening_email_result = yield context.call_activity("send_final_emails_activity", screening_email_input)
-    # logging.info(f"Screening emails sent: {screening_email_result.get('emails_sent', 0)}")
-           
-        
+        idx += 1
     
-    #phase 4 starting voice interview
+    # PHASE 3: SENDING EMAILS
+    logging.info(f"📧 Sending screening results emails for {len(selected)} selected candidates")
+    
+    screening_email_input = {
+        "qualified_candidates": selected,
+        "job_description": job_description_text,
+        "chat_id": chat_id,
+        "current_stage": "Resume Screening",
+        "next_stage": "Voice Interview"
+    }
+    
+    screening_email_result = yield context.call_activity("send_final_emails_activity", screening_email_input)
+    logging.info(f"Screening emails sent: {screening_email_result}")
     
     # PHASE 4: VOICE INTERVIEWS
-    logging.info("🎯 Starting voice interviews")
-
+    logging.info("🎤 Starting voice interviews")
+    
     voice_interview_tasks = []
-    for i, candidate in enumerate(selected):  # 'selected' from resume screening phase
+    for i, candidate in enumerate(selected):
         task_input = {
             "candidate": candidate,
-            "job_description_text": job_description_text,  # Assuming this is a string of JD text; rename if it's URL
+            "job_description_text": job_description_text,
             "chat_id": chat_id,
-            "voice_interview_threshold": voice_interview_threshold  # Define this above
+            "voice_interview_threshold": voice_interview_threshold
         }
-        logging.info(f"🔊 Creating voice interview task {i+1} for {candidate.get('name')}")
+        logging.info(f"🔊 Creating voice interview task {i + 1} for {candidate.get('name')}")
         task = context.call_activity("trigger_single_voice_interview_activity", task_input)
         voice_interview_tasks.append(task)
 
     # Execute all voice interview tasks in parallel
     try:
         voice_results = yield context.task_all(voice_interview_tasks)
+        logging.info(f"++++++++++++++++++++++++++++++{voice_results}+++++++++++++++++++")
         logging.info(f"✅ Voice interviews completed for {len(voice_results)} candidates")
         
         if voice_results is None:
@@ -147,42 +154,46 @@ def orchestrator_function(context: df.DurableOrchestrationContext):
     except Exception as e:
         logging.error(f"❌ Error in voice interviews: {str(e)}")
         voice_results = []
+    
     voice_result_score = [
         {
             "resume_url": item["resume_url"],
-            "score": item["overall_score"]
+            "score": item["overall_score"],
+            "candidate_name": item.get("name", ""),
+            "candidate_email": item.get("email", ""),
+            "candidate_phone": item.get("phone", "")
         }
         for item in voice_results
     ]
+    
     response = (
-    supabase.table("screening")
-    .update({"prescreening_result_resumes": voice_result_score})
-    .eq("chat_id", chat_id)
-    .execute()
-)
-    logging.info(f"PreScreening results updated in Supabase: {response}")
-    status=(
+        supabase.table("screening")
+        .update({"prescreening_result_resumes": voice_result_score})
+        .eq("chat_id", chat_id)
+        .execute()
+    )
+    logging.info(f"Pre-screening results updated in Supabase: {response}")
+    
+    status = (
         supabase.table("screening")
         .update({"status": "completed"})
         .eq("chat_id", chat_id)
         .execute()
     )
+    logging.info(f"Workflow status updated to completed in Supabase: {status}")
     
-    # return voice_results
-    # Filter only successful voice interview results
-    successful_voice_results = []
-    for result in voice_results:
-        if result and isinstance(result, dict) and not result.get("error"):
-            successful_voice_results.append(result)
-   
+    # Filter successful voice interviews
+    successful_voice_results = [
+        result for result in voice_results
+        if result and isinstance(result, dict) and not result.get("error")
+    ]
     logging.info(f"🏆 Successful voice interviews: {len(successful_voice_results)}")
-
     
-   
     logging.info("🎯 Orchestrator completed successfully")
-    if screening_results[0]["overall_fit_score"]>2:
-        logging.info("jai mata di")
-    # Return screening results
+    
+    if screening_results and screening_results[0].get("overall_fit_score", 0) > 2:
+        logging.info("jai mata di 🙏")
+    
     final_result = {
         "status": "success",
         "chat_id": chat_id,
@@ -191,12 +202,23 @@ def orchestrator_function(context: df.DurableOrchestrationContext):
             "processing_timestamp": datetime.now().isoformat()
         },
         "screening_results": screening_results,
-        "voice_results":voice_results
+        "voice_results": voice_results
     }
     
-        
-    logging.info(final_result)
+    logging.info(f"Final Orchestration Result: {final_result}")
     return final_result
+
 
 # Create the orchestrator
 main = df.Orchestrator.create(orchestrator_function)
+
+
+
+
+
+
+
+
+
+
+

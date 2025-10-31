@@ -573,6 +573,7 @@ class PreScreeningAgent:
                 "candidate_id": candidate_id,
                 "name": candidate_name,
                 "phone": candidate.get("phone"),
+                "email": candidate.get("email"),
                 "status": "completed",
                 "overall_score": round(avg_score, 2),
                 "individual_scores": scores,
