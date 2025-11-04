@@ -12,7 +12,7 @@ import json
 # from langchain.output_parsers import PydanticOutputParser
 from langchain_core.output_parsers import PydanticOutputParser
 
-from langchain.chains import LLMChain
+# from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 # from langchain.output_parsers import PydanticOutputParser
 
@@ -32,7 +32,6 @@ from sklearn.cluster import KMeans
 import numpy as np
 import pandas as pd
 from typing import List, Dict, Any
-from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader, TextLoader
 import pandas as pd
 from openai import AzureOpenAI
