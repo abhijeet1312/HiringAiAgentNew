@@ -9,7 +9,7 @@ pydantic
 
 # Machine Learning and AI
 huggingface_hub
-langchain
+langchain==0.0.350
 langchain_community
 langchain_google_genai
 langchain-huggingface
