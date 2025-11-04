@@ -9,13 +9,17 @@ load_dotenv()
 from jai import send_bulk_email 
 
 import json
-from langchain.output_parsers import PydanticOutputParser
+# from langchain.output_parsers import PydanticOutputParser
+from langchain_core.output_parsers import PydanticOutputParser
+
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
-from langchain.output_parsers import PydanticOutputParser
-from langchain_core.output_parsers import StrOutputParser
-from langchain_huggingface import HuggingFaceEndpoint
-from langchain_core.runnables import RunnableSequence
+# from langchain.output_parsers import PydanticOutputParser
+
+from langchain_core.output_parsers import PydanticOutputParser
+# from langchain_core.output_parsers import StrOutputParser
+# from langchain_huggingface import HuggingFaceEndpoint
+# from langchain_core.runnables import RunnableSequence
 from pydantic import BaseModel, Field, field_validator
 
 from langchain_core.language_models.llms import LLM
