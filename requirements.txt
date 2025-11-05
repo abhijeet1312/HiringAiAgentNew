@@ -4,23 +4,18 @@
 fastapi
 uvicorn
 
-# Data models and validation
-pydantic
+# Data models and validation - PIN TO V1 FOR LANGCHAIN 0.2.x COMPATIBILITY
+pydantic<2.0.0
+
 
 # Machine Learning and AI
 huggingface_hub
-# langchain==0.0.350
-# langchain_community
-# langchain_google_genai
-# langchain-huggingface
-# langchain_openai
 
+# LangChain ecosystem - these versions require Pydantic v1
 langchain==0.2.11
 langchain-community==0.2.10
 langchain-google-genai==1.0.6
 langchain-openai==0.1.16
-
-
 
 # Data processing
 pandas
@@ -50,17 +45,86 @@ supabase
 # Text processing
 requests
 
-
 azure-functions
 azure-functions-durable
-
 
 opentelemetry-api==1.23.0
 opentelemetry-sdk==1.23.0
 opentelemetry-instrumentation==0.44b0
 
-
 # 🔒 Pin to GLIBC-compatible version to avoid Rust ABI issues
 cryptography<42.0
+
+
+
+
+
+
+
+
+# # DO NOT include azure-functions-worker in this file
+# # The Python Worker is managed by Azure Functions platform
+# # Manually managing azure-functions-worker may cause unexpected issues
+# fastapi
+# uvicorn
+
+# # Data models and validation
+# pydantic
+
+# # Machine Learning and AI
+# huggingface_hub
+# # langchain==0.0.350
+# # langchain_community
+# # langchain_google_genai
+# # langchain-huggingface
+# # langchain_openai
+
+# langchain==0.2.11
+# langchain-community==0.2.10
+# langchain-google-genai==1.0.6
+# langchain-openai==0.1.16
+
+
+
+# # Data processing
+# pandas
+# numpy
+# pypdf
+# scikit-learn
+# docx2txt
+# pdfminer.six 
+# PyPDF2
+# chardet 
+# openai>=1.0.0
+
+# # Environment and configuration
+# python-dotenv
+
+# # File handling and storage
+# python-multipart
+# azure-storage-blob
+# boto3
+
+# # Communication services
+# twilio
+
+# # Database
+# supabase
+
+# # Text processing
+# requests
+
+
+# azure-functions
+# azure-functions-durable
+
+
+# opentelemetry-api==1.23.0
+# opentelemetry-sdk==1.23.0
+# opentelemetry-instrumentation==0.44b0
+
+
+# # 🔒 Pin to GLIBC-compatible version to avoid Rust ABI issues
+# cryptography<42.0
 
 
