@@ -2,7 +2,6 @@
 
 from langchain.agents import Tool, AgentExecutor, LLMSingleActionAgent
 from langchain.prompts import StringPromptTemplate
-from langchain_community.chat_models import ChatOllama
 import traceback
 from langchain.chains import LLMChain
 from langchain.agents.output_parsers import ReActSingleInputOutputParser
@@ -17,7 +16,6 @@ from twilio.rest import Client
 from openai import AzureOpenAI
 import tempfile
 
-from langchain.schema import AgentAction, AgentFinish
 from langchain.memory import ConversationBufferMemory
 import requests
 import json

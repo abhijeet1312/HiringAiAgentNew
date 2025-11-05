@@ -9,17 +9,11 @@ load_dotenv()
 from jai import send_bulk_email 
 
 import json
-# from langchain.output_parsers import PydanticOutputParser
 from langchain_core.output_parsers import PydanticOutputParser
 
-# from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
-# from langchain.output_parsers import PydanticOutputParser
 
 from langchain_core.output_parsers import PydanticOutputParser
-# from langchain_core.output_parsers import StrOutputParser
-# from langchain_huggingface import HuggingFaceEndpoint
-# from langchain_core.runnables import RunnableSequence
 from pydantic import BaseModel, Field, field_validator
 
 from langchain_core.language_models.llms import LLM
@@ -36,12 +30,9 @@ from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader, Te
 import pandas as pd
 from openai import AzureOpenAI
 load_dotenv()
-# api_token = os.getenv("HUGGINGFACEHUB_API_TOKEN")
-# print(api_token)
 
 from getpass import getpass
 
-# HUGGINGFACEHUB_API_TOKEN = getpass()
 import os
 
 class CandidateAssessment(BaseModel):
