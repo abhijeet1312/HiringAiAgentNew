@@ -9,11 +9,20 @@ pydantic
 
 # Machine Learning and AI
 huggingface_hub
-langchain==0.0.350
-langchain_community
-langchain_google_genai
-langchain-huggingface
-langchain_openai
+# langchain==0.0.350
+# langchain_community
+# langchain_google_genai
+# langchain-huggingface
+# langchain_openai
+
+langchain==0.2.11
+langchain-community==0.2.10
+langchain-google-genai==1.0.6
+langchain-huggingface==0.1.0
+langchain-openai==0.1.16
+
+
+
 # Data processing
 pandas
 numpy
