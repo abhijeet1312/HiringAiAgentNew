@@ -1,7 +1,7 @@
 # Modified PreScreeningAgent class with Azure OpenAI Whisper
 
 from langchain.agents import Tool, AgentExecutor, LLMSingleActionAgent
-from langchain.prompts import StringPromptTemplate
+from langchain_core.prompts import StringPromptTemplate
 import traceback
 from langchain.chains import LLMChain
 from langchain.agents.output_parsers import ReActSingleInputOutputParser

@@ -11,8 +11,8 @@ from jai import send_bulk_email
 import json
 from langchain_core.output_parsers import PydanticOutputParser
 
-from langchain.prompts import PromptTemplate
-
+# from langchain.prompts import PromptTemplate
+from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, Field, field_validator
 
