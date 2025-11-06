@@ -4,17 +4,18 @@
 fastapi
 uvicorn
 
-# Data models and validation - CRITICAL: Pin to v1 for langchain 0.2.x
-pydantic==1.10.13
+# Data models and validation - Pydantic v2 for modern compatibility
+pydantic>=2.0.0,<3.0.0
 
 # Machine Learning and AI
 huggingface_hub
-#jai mata di 
-# LangChain ecosystem - these versions require Pydantic v1
-langchain==0.2.11
-langchain-community==0.2.10
-langchain-google-genai==1.0.6
-langchain-openai==0.1.16
+
+# LangChain ecosystem - UPGRADED to v2 versions that support Pydantic v2
+langchain>=0.3.0
+langchain-community>=0.3.0
+langchain-google-genai>=2.0.0
+langchain-openai>=0.2.0
+langchain-core>=0.3.0
 
 # Data processing
 pandas
@@ -38,7 +39,7 @@ boto3
 # Communication services
 twilio
 
-# Database
+# Database - requires Pydantic v2
 supabase
 
 # Text processing
