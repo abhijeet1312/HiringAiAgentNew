@@ -1,10 +1,19 @@
 # Modified PreScreeningAgent class with Azure OpenAI Whisper
 
+# from langchain.agents import Tool, AgentExecutor, LLMSingleActionAgent
+# from langchain_core.prompts import StringPromptTemplate
+# import traceback
+# from langchain.chains import LLMChain
+# from langchain.agents.output_parsers import ReActSingleInputOutputParser
+
+from langchain.agents.output_parsers.react_single_input import ReActSingleInputOutputParser
+
 from langchain.agents import Tool, AgentExecutor, LLMSingleActionAgent
 from langchain_core.prompts import StringPromptTemplate
 import traceback
 from langchain.chains import LLMChain
-from langchain.agents.output_parsers import ReActSingleInputOutputParser
+from langchain_core.agents import AgentOutputParser
+from langchain_core.outputs import LLMResult
 
 import warnings
 from requests.auth import HTTPBasicAuth
@@ -16,7 +25,8 @@ from twilio.rest import Client
 from openai import AzureOpenAI
 import tempfile
 
-from langchain.memory import ConversationBufferMemory
+# from langchain.memory import ConversationBufferMemory
+from langchain_core.memory import ConversationBufferMemory
 import requests
 import json
 import time
