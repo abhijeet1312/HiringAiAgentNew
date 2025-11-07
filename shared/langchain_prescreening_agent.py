@@ -2,7 +2,10 @@
 
 from langchain_core.tools import tool
 from langchain_core.prompts import PromptTemplate, ChatPromptTemplate
-from langchain.agents import create_react_agent, AgentExecutor
+# from langchain.agents import create_react_agent, AgentExecutor
+from langgraph.prebuilt import create_react_agent
+from langchain.agents import AgentExecutor
+
 import traceback
 
 import warnings
