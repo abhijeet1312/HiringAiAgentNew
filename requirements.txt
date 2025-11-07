@@ -28,6 +28,8 @@ PyPDF2
 chardet 
 openai>=1.0.0
 
+#jaimatadi 
+
 # Environment and configuration
 python-dotenv
 
