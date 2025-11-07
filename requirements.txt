@@ -1,22 +1,19 @@
 # DO NOT include azure-functions-worker in this file
-# The Python Worker is managed by Azure Functions platform
-# Manually managing azure-functions-worker may cause unexpected issues
 fastapi
 uvicorn
 
-# Data models and validation - Pydantic v2 for modern compatibility
+# Data models and validation - Pydantic v2
 pydantic>=2.0.0,<3.0.0
 
 # Machine Learning and AI
 huggingface_hub
 
-# LangChain ecosystem - UPGRADED to v2 versions that support Pydantic v2
-langchain>=0.3.0
-langchain-community>=0.3.0
-langchain-google-genai>=2.0.0
-langchain-openai>=0.2.0
-langchain-core>=0.3.0
-langgraph==0.2.56
+# LangChain ecosystem - Use 0.2.x versions with Pydantic v2 compatibility patch
+langchain==0.2.16
+langchain-community==0.2.16
+langchain-google-genai==1.0.10
+langchain-openai==0.1.23
+langchain-core==0.2.39
 
 # Data processing
 pandas
@@ -29,8 +26,6 @@ PyPDF2
 chardet 
 openai>=1.0.0
 
-#jaimatadi 
-
 # Environment and configuration
 python-dotenv
 
@@ -42,7 +37,7 @@ boto3
 # Communication services
 twilio
 
-# Database - requires Pydantic v2
+# Database
 supabase
 
 # Text processing
@@ -57,3 +52,64 @@ opentelemetry-instrumentation==0.44b0
 
 # 🔒 Pin to GLIBC-compatible version to avoid Rust ABI issues
 cryptography<42.0
+
+
+# # DO NOT include azure-functions-worker in this file
+# # The Python Worker is managed by Azure Functions platform
+# # Manually managing azure-functions-worker may cause unexpected issues
+# fastapi
+# uvicorn
+
+# # Data models and validation - Pydantic v2 for modern compatibility
+# pydantic>=2.0.0,<3.0.0
+
+# # Machine Learning and AI
+# huggingface_hub
+
+# # LangChain ecosystem - UPGRADED to v2 versions that support Pydantic v2
+# langchain>=0.3.0
+# langchain-community>=0.3.0
+# langchain-google-genai>=2.0.0
+# langchain-openai>=0.2.0
+# langchain-core>=0.3.0
+# langgraph==0.2.56
+
+# # Data processing
+# pandas
+# numpy
+# pypdf
+# scikit-learn
+# docx2txt
+# pdfminer.six 
+# PyPDF2
+# chardet 
+# openai>=1.0.0
+
+# #jaimatadi 
+
+# # Environment and configuration
+# python-dotenv
+
+# # File handling and storage
+# python-multipart
+# azure-storage-blob
+# boto3
+
+# # Communication services
+# twilio
+
+# # Database - requires Pydantic v2
+# supabase
+
+# # Text processing
+# requests
+
+# azure-functions
+# azure-functions-durable
+
+# opentelemetry-api==1.23.0
+# opentelemetry-sdk==1.23.0
+# opentelemetry-instrumentation==0.44b0
+
+# # 🔒 Pin to GLIBC-compatible version to avoid Rust ABI issues
+# cryptography<42.0

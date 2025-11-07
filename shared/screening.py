@@ -6,7 +6,8 @@ from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
 load_dotenv()
 
-from jai import send_bulk_email 
+from jai import send_bulk_email
+# from jai import send_bulk_email
 
 import json
 from langchain_core.output_parsers import PydanticOutputParser
