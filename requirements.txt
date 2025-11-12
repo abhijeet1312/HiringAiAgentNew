@@ -5,6 +5,9 @@ uvicorn
 # Data models and validation - Pydantic v2
 pydantic>=2.0.0,<3.0.0
 
+openpyxl==3.1.5
+
+
 # Machine Learning and AI
 huggingface_hub
 
