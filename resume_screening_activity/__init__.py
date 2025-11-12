@@ -68,17 +68,15 @@ def main(context):
         job_description_urls = data.get("job_description_urls", [])
         chat_id = data.get("chat_id")
         resume_index = data.get("resume_index", 0)
+        candidate_name = data.get("candidate_name", "")
+        candidate_phone = data.get("candidate_phone", "")
         
         logging.info(f"Screening resume {resume_index} for chat_id: {chat_id}")
         
-        if not resume_url or not job_description_urls:
-            result = {
-                "error": "Missing required fields: resume_url or job_description_urls",
-                "resume_url": resume_url,
-                "resume_index": resume_index,
-                "chat_id": chat_id
-            }
-            return result
+        if not (data.get("resume_text") or resume_url) or not job_description_urls:
+          result = {"error": "Missing required fields: resume_text/resume_url or job_description_urls", "resume_url": resume_url, "job_description_urls": job_description_urls}
+          return result
+
         
         # Parse and extract job description from first URL
         try:
@@ -105,13 +103,17 @@ def main(context):
                 "chat_id": chat_id
             }
             return result
-        
-        # Parse and extract resume text from Azure blob
+                # Parse and extract resume text from Azure blob OR use provided resume_text (from Excel)
         try:
-            resume_blob_info = parse_azure_url_to_container_blob_path(resume_url)
-            resume_text = extract_text_from_azure(resume_blob_info['blob_path'])
-            
-            if not resume_text or len(resume_text.strip()) < 10:
+            # If caller passed resume_text (Excel row), use it directly
+            if data.get("resume_text"):
+                resume_text = data.get("resume_text")
+            else:
+                # fallback: parse resume_url to blob and extract
+                resume_blob_info = parse_azure_url_to_container_blob_path(resume_url)
+                resume_text = extract_text_from_azure(resume_blob_info['blob_path'])
+
+            if not resume_text or len(str(resume_text).strip()) < 10:
                 result = {
                     "error": "Resume text extraction failed or text too short",
                     "resume_url": resume_url,
@@ -120,7 +122,7 @@ def main(context):
                 }
                 return result
         except Exception as e:
-            logging.error(f"Error extracting text from {resume_url}: {str(e)}")
+            logging.error(f"Error extracting text from resume: {str(e)}")
             result = {
                 "error": f"Resume text extraction failed: {str(e)}",
                 "resume_url": resume_url,
@@ -128,6 +130,7 @@ def main(context):
                 "chat_id": chat_id
             }
             return result
+
         
         # Create screening agent with extracted job description
         try:
@@ -200,9 +203,12 @@ def main(context):
                 "filename": filename,
                 "chat_id": chat_id,
                 "job_description_url": job_desc_url,
-                "candidate_name": assessment.get("candidate_name", "Unknown"),
+                "candidate_name": candidate_name or assessment.get("candidate_name", "Unknown"),
+                "candidate_phone": candidate_phone or phone_number or assessment.get("candidate_phone", ""),
+
+                # "candidate_name": assessment.get("candidate_name", "Unknown"),
                 "candidate_email": assessment.get("candidate_email", ""),
-                "candidate_phone": phone_number or assessment.get("candidate_phone", ""),
+                # "candidate_phone": phone_number or assessment.get("candidate_phone", ""),
                 "overall_fit_score":overall_fit_score,
                 
                 "status": status,

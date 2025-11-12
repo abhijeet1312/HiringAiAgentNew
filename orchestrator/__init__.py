@@ -7,7 +7,9 @@ from supabase_client import supabase
 from shared.azurestorage import (
     azure_config,
     extract_text_from_azure,
-    parse_azure_url_to_container_blob_path
+    parse_azure_url_to_container_blob_path,
+    parse_excel_candidates_from_azure,
+    is_excel_file
 )
 
 
@@ -20,13 +22,13 @@ def orchestrator_function(context: df.DurableOrchestrationContext):
     # Get input data
     input_data = context.get_input()
     chat_id = input_data.get("chat_id")
-    resume_urls = input_data.get("resume_urls", [])
+    # resume_urls = input_data.get("resume_urls", [])
     job_description_urls = input_data.get("job_description_urls", [])
     notification_email = input_data.get("notification_email", "")
     voice_interview_threshold = input_data.get("voice_interview_threshold", 3.0)
     
     logging.info(f"Processing hiring workflow for chat_id: {chat_id}")
-    logging.info(f"Total resumes to process: {len(resume_urls)}")
+    # logging.info(f"Total resumes to process: {len(resume_urls)}")
     logging.info(f"Total job descriptions: {len(job_description_urls)}")
     
     job_desc_url = job_description_urls[0]  # Use first job description URL
@@ -34,32 +36,80 @@ def orchestrator_function(context: df.DurableOrchestrationContext):
     job_description_text = extract_text_from_azure(job_desc_blob_info['blob_path'])
     
     # PHASE 1: INPUT VALIDATION
-    if not resume_urls or not job_description_urls:
-        error_msg = "Invalid input: resume_urls and job_description_urls are required"
-        logging.error(error_msg)
+    # if not resume_urls or not job_description_urls:
+    #     error_msg = "Invalid input: resume_urls and job_description_urls are required"
+    #     logging.error(error_msg)
         
-        # Log error activity
+    #     # Log error activity
+    #     yield context.call_activity("log_error_activity", {
+    #         "chat_id": chat_id,
+    #         "error": error_msg,
+    #         "step": "input_validation"
+    #     })
+    #     return {"status": "failed", "error": error_msg, "step": "input_validation"}
+    
+    
+    #excel file handling
+        # --- Determine input type (Excel or PDF list) ---
+    resume_input_urls = input_data.get("resume_urls", [])
+    if isinstance(resume_input_urls, str):
+        resume_input_urls = [resume_input_urls]
+
+    candidates = []
+
+    if not resume_input_urls:
+        error_msg = "Missing resume input URL(s)"
+        logging.error(error_msg)
         yield context.call_activity("log_error_activity", {
             "chat_id": chat_id,
             "error": error_msg,
             "step": "input_validation"
         })
         return {"status": "failed", "error": error_msg, "step": "input_validation"}
+
+    first_resume_url = resume_input_urls[0]
+    blob_info = parse_azure_url_to_container_blob_path(first_resume_url)
+    blob_path = blob_info["blob_path"]
+
+    if is_excel_file(blob_path):
+        logging.info(f"🧾 Detected Excel candidate list: {first_resume_url}")
+        candidates = parse_excel_candidates_from_azure(blob_path)
+        resume_urls = [c["resume_url"] for c in candidates]
+    else:
+        logging.info(f"📄 Detected PDF-based resumes: {len(resume_input_urls)} files")
+        candidates = [{"resume_url": url} for url in resume_input_urls]
+    if not candidates:
+        logging.error("No candidates extracted from input file. Aborting workflow.")
+        yield context.call_activity("log_error_activity", {
+            "chat_id": chat_id,
+            "error": "No candidates extracted from input file (Excel/PDF)",
+            "step": "candidate_extraction"
+        })
+        return {"status": "failed", "error": "No candidates extracted"}
+
+
     
     # PHASE 2: RESUME SCREENING - Fan-Out/Fan-In Pattern
     logging.info("🚀 Starting resume screening phase")
     
     # Collect screening tasks
     screening_tasks = []
-    for i, resume_url in enumerate(resume_urls):
+        # inside the loop where you build screening_tasks
+    for i, candidate in enumerate(candidates):
+        # prefer resume_text (Excel rows), else resume_url (pdf)
         task_input = {
-            "resume_url": resume_url,
+            "resume_url": candidate.get("resume_url"),         # may be None or ""
+            "resume_text": candidate.get("resume_text"),       # new: can be multiline text
             "job_description_urls": job_description_urls,
             "chat_id": chat_id,
-            "resume_index": i
+            "resume_index": i,
+            "candidate_name": candidate.get("name", ""),
+            "candidate_email": candidate.get("email", ""),
+            "candidate_phone": candidate.get("phone", "")
         }
-        logging.info(f"Creating screening task {i} for resume: {resume_url}")
+        logging.info(f"Creating screening task {i} for resume: {candidate.get('resume_url') or 'excel_row'}")
         screening_tasks.append(context.call_activity("resume_screening_activity", task_input))
+
     
     # Fan-In: Execute all screening tasks in parallel
     logging.info(f"Executing {len(screening_tasks)} screening tasks in parallel")
@@ -92,7 +142,7 @@ def orchestrator_function(context: df.DurableOrchestrationContext):
     
     selected = []
     not_selected = []
-    score_threshold = 4
+    score_threshold = 2
     idx = 0
     
     for candidate in screening_results:

@@ -1,4 +1,59 @@
+#  screening_tasks = []
+#     for i, candidate in enumerate(candidates):
+#         task_input = {
+#             "resume_url": candidate["resume_url"],
+#             "job_description_urls": job_description_urls,
+#             "chat_id": chat_id,
+#             "resume_index": i,
+#             "candidate_name": candidate.get("name", ""),
+#             # "candidate_email": candidate.get("email", ""),
+#             "candidate_phone": candidate.get("phone", "")
+#         }
+#         logging.info(f"Creating screening task {i} for resume: {candidate['resume_url']}")
+#         screening_tasks.append(context.call_activity("resume_screening_activity", task_input))
+    
+#################################
+
+
+
+        
+        # # Parse and extract resume text from Azure blob
+        # try:
+        #     resume_blob_info = parse_azure_url_to_container_blob_path(resume_url)
+        #     resume_text = extract_text_from_azure(resume_blob_info['blob_path'])
+            
+        #     if not resume_text or len(resume_text.strip()) < 10:
+        #         result = {
+        #             "error": "Resume text extraction failed or text too short",
+        #             "resume_url": resume_url,
+        #             "resume_index": resume_index,
+        #             "chat_id": chat_id
+        #         }
+        #         return result
+        # except Exception as e:
+        #     logging.error(f"Error extracting text from {resume_url}: {str(e)}")
+        #     result = {
+        #         "error": f"Resume text extraction failed: {str(e)}",
+        #         "resume_url": resume_url,
+        #         "resume_index": resume_index,
+        #         "chat_id": chat_id
+        #     }
+        #     return result  
+
+#########################################
+
+
+
+# if not resume_url or not job_description_urls:
+#             result = {
+#                 "error": "Missing required fields: resume_url or job_description_urls",
+#                 "resume_url": resume_url,
+#                 "resume_index": resume_index,
+#                 "chat_id": chat_id
+#             }
+#             return result
 # import json
+#
 # import logging
 # import azure.durable_functions as df
 # from datetime import datetime

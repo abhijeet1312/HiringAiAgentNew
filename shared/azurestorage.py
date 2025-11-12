@@ -450,3 +450,121 @@ def parse_azure_url_to_container_blob_path(azure_url: str) -> dict:
         )
 
 
+
+
+import pandas as pd
+import io
+
+def is_excel_file(blob_path: str) -> bool:
+    """Check if a blob path likely refers to an Excel file"""
+    return blob_path.lower().endswith((".xlsx", ".xls"))
+
+
+import io
+import re
+import pandas as pd
+from urllib.parse import unquote
+
+URL_RE = re.compile(r"https?://[^\s\"']+")
+PHONE_RE = re.compile(r"(?:\+?\d{1,3}[-.\s]?)?(?:\(?\d{2,4}\)?[-.\s]?)?\d{6,12}")
+
+def _clean_val(v):
+    if pd.isna(v) or v is None:
+        return ""
+    if isinstance(v, str):
+        v = v.replace("\xa0", " ").strip()
+        if (v.startswith('"') and v.endswith('"')) or (v.startswith("'") and v.endswith("'")):
+            v = v[1:-1].strip()
+        return v
+    return str(v)
+
+def parse_excel_candidates_from_azure(blob_path: str) -> list[dict]:
+    """
+    Read Excel from Azure and return one candidate dict per row.
+    Each candidate will contain:
+      - name, email, phone (if found)
+      - resume_url (if a URL found in row)
+      - resume_text (concatenation of all cleaned cell values)  <-- new
+    """
+    try:
+        decoded_blob_path = unquote(blob_path)
+        blob_client = azure_config.container_client.get_blob_client(decoded_blob_path)
+        blob_data = blob_client.download_blob().readall()
+
+        df = pd.read_excel(io.BytesIO(blob_data), header=0, dtype=object)
+        # normalize columns
+        df.columns = [str(c).strip().replace("\xa0", " ").lower() for c in df.columns]
+        df = df.where(pd.notnull(df), None)
+
+        candidates = []
+        for idx, row in df.iterrows():
+            # collect raw cell values in order
+            row_vals = [row[col] for col in df.columns]
+            cleaned_vals = [_clean_val(v) for v in row_vals if _clean_val(v) != ""]
+
+            # build a single resume_text by joining with newlines (or space)
+            resume_text = "\n".join(cleaned_vals).strip()
+
+            # try find explicit url in row values
+            resume_url = ""
+            for v in row_vals:
+                try:
+                    sval = _clean_val(v)
+                    if not sval:
+                        continue
+                    m = URL_RE.search(sval)
+                    if m:
+                        resume_url = m.group(0)
+                        break
+                except Exception:
+                    continue
+
+            # try find phone
+            phone = ""
+            for v in row_vals:
+                s = _clean_val(v)
+                if not s:
+                    continue
+                # simple numeric cleanup
+                digits = re.sub(r"[^\d+]", "", s)
+                if len(re.sub(r"[^\d]", "", digits)) >= 7:
+                    phone = digits
+                    break
+                m = PHONE_RE.search(s)
+                if m:
+                    phone = re.sub(r"[^\d+]", "", m.group(0))
+                    break
+
+            # try find email
+            email = ""
+            for v in row_vals:
+                s = _clean_val(v)
+                if not s:
+                    continue
+                if "@" in s and "." in s.split("@")[-1]:
+                    email = s
+                    break
+
+            # name heuristics: prefer 'name' column, else first non-url, non-phone text
+            name = ""
+            if "name" in df.columns:
+                name = _clean_val(row.get("name", "") or "")
+            if not name:
+                for v in cleaned_vals:
+                    if not URL_RE.search(v) and not PHONE_RE.search(v) and "@" not in v:
+                        name = v
+                        break
+
+            candidate = {
+                "name": name,
+                "email": email,
+                "phone": phone,
+                "resume_url": resume_url,   # may be empty
+                "resume_text": resume_text  # always present (could be empty string)
+            }
+            candidates.append(candidate)
+
+        return candidates
+
+    except Exception as e:
+        raise RuntimeError(f"Error parsing Excel from Azure: {e}")
