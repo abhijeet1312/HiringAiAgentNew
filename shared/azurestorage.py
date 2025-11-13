@@ -559,7 +559,7 @@ def parse_excel_candidates_from_azure(blob_path: str) -> list[dict]:
                 "name": name,
                 "email": email,
                 "phone": phone,
-                "resume_url": resume_url,   # may be empty
+                "resume_url": resume_url ,   # may be empty
                 "resume_text": resume_text  # always present (could be empty string)
             }
             candidates.append(candidate)
