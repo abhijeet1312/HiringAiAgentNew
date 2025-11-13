@@ -207,7 +207,7 @@ def orchestrator_function(context: df.DurableOrchestrationContext):
     
     voice_result_score = [
         {
-            "resume_url": item["resume_url"],
+            "resume_url": item["resume_url"] or "no url",
             "score": item["overall_score"],
             "candidate_name": item.get("name", ""),
             "candidate_email": item.get("email", ""),

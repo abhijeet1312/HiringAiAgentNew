@@ -368,7 +368,7 @@ class PreScreeningAgent:
       
     
 #    
-    def wait_for_responses(self, session_id: str, num_questions: int, timeout: int = 300, webhook_base_url: str = "https://newaiprescreeningwebhook-dkcxc6d5e9ame4a2.centralindia-01.azurewebsites.net"):
+    def wait_for_responses(self, session_id: str, num_questions: int, timeout: int = 90, webhook_base_url: str = "https://newaiprescreeningwebhook-dkcxc6d5e9ame4a2.centralindia-01.azurewebsites.net"):
        """Wait for webhook responses by calling API endpoints instead of reading files."""
        import requests
        import time
@@ -534,10 +534,38 @@ class PreScreeningAgent:
             if call_sid:
                 call_status = self.check_call_status(call_sid)
                 print(f"Call status: {call_status}")
+
+                # If check_call_status returned an error object, treat as failed
+                if call_status.get("error"):
+                    print(f"Call fetch error: {call_status['error']}")
+                    results.append({
+                        "candidate_id": candidate_id,
+                        "name": candidate_name,
+                        "status": "call_failed",
+                        "error": call_status["error"],
+                        "score": 0.0,
+                        "call_sid": call_sid
+                    })
+                    continue
+
+                # Normalize status string (twilio statuses: queued, ringing, in-progress, completed, busy, failed, no-answer, canceled)
+                status = str(call_status.get("status", "")).lower()
+                if status in ("failed", "no-answer", "busy", "canceled"):
+                    print(f"Call ended with status '{status}'. Marking as call_failed/no_response.")
+                    results.append({
+                        "candidate_id": candidate_id,
+                        "name": candidate_name,
+                        "status": "call_failed" if status == "failed" else "no_response",
+                        "error": f"call_status_{status}",
+                        "score": 0.0,
+                        "call_sid": call_sid
+                    })
+                    continue
+
             
             # Wait for responses with longer timeout
             print(f"Waiting for {len(questions)} responses...")
-            responses = self.wait_for_responses(call_result.get("session_id"), len(questions), timeout=300)  # 5 minutes
+            responses = self.wait_for_responses(call_result.get("session_id"), len(questions), timeout=90)  # 5 minutes
             
             if not responses:
                 print(f"No responses received for {candidate_name}")
@@ -546,7 +574,9 @@ class PreScreeningAgent:
                     "name": candidate_name,
                     "status": "no_response",
                     "score": 0.0,
-                    "call_sid": call_sid
+                    "call_sid": call_sid,
+                    "resume_url": candidate.get("resume_url", "jmd"),
+                    "overall_score": 0.0,
                 })
                 continue
             
