@@ -58,6 +58,9 @@ def send_final_emails_activity(email_data: dict):
     
     Please do not include any subject line in the email body.
     
+    Also add this at the end of the email:
+    Best regards,
+    Aurjobs HR Team
     """)
 
     for candidate in recipients:

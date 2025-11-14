@@ -565,3 +565,98 @@
 #     result = agent.run_pre_screening(json.dumps(test_input))
 #     print(json.dumps(result, indent=2))
 
+##################----------------------
+
+#  def wait_for_responses(self, session_id: str, num_questions: int, timeout: int = 90, webhook_base_url: str = "https://newaiprescreeningwebhook-dkcxc6d5e9ame4a2.centralindia-01.azurewebsites.net"):
+#        """Wait for webhook responses by calling API endpoints instead of reading files."""
+#        import requests
+#        import time
+    
+#        start_time = time.time()
+#        print(f"Waiting for {num_questions} responses for session {session_id}...")
+#        print(f"Using webhook URL: {webhook_base_url}")
+    
+#        while (time.time() - start_time) < timeout:
+#         try:
+#             # Call the webhook API to get current status
+#             status_response = requests.get(f"{webhook_base_url}/status/{session_id}", timeout=10)
+            
+#             if status_response.status_code == 200:
+#                 status_data = status_response.json()
+                
+#                 if status_data.get("success"):
+#                     completed_questions = status_data.get("completed_questions", 0)
+#                     total_questions = status_data.get("total_questions", num_questions)
+#                     progress = status_data.get("progress_percentage", 0)
+#                     status = status_data.get("status", "unknown")
+                    
+#                     print(f"Progress: {completed_questions}/{total_questions} ({progress:.1f}%) - Status: {status}")
+                    
+#                     # Check if interview is completed
+#                     if status == "completed" or completed_questions >= num_questions:
+#                         print(f"Interview completed! Getting responses...")
+                        
+#                         # Get all responses
+#                         responses_response = requests.get(f"{webhook_base_url}/responses/{session_id}", timeout=10)
+                        
+#                         if responses_response.status_code == 200:
+#                             responses_data = responses_response.json()
+                            
+#                             if responses_data.get("success"):
+#                                 responses = responses_data.get("responses", [])
+#                                 print(f"Successfully retrieved {len(responses)} responses!")
+                                
+#                                 # Clean up session from webhook memory
+#                                 try:
+#                                     cleanup_response = requests.delete(f"{webhook_base_url}/session/{session_id}", timeout=5)
+#                                     if cleanup_response.status_code == 200:
+#                                         print(f"Session {session_id} cleaned up from webhook memory")
+#                                 except Exception as e:
+#                                     print(f"Failed to cleanup session: {e}")
+                                
+#                                 return responses
+#                             else:
+#                                 print(f"Failed to get responses: {responses_data.get('error', 'Unknown error')}")
+#                         else:
+#                             print(f"HTTP error getting responses: {responses_response.status_code}")
+#                             print(f"Response content: {responses_response.text}")
+                    
+#                     # Show progress every 30 seconds
+#                     elapsed = time.time() - start_time
+#                     if int(elapsed) % 30 == 0 and elapsed > 0:
+#                         print(f"Still waiting... {elapsed:.0f}s elapsed")
+                
+#                 else:
+#                     print(f"Status API error: {status_data.get('error', 'Unknown error')}")
+            
+#             else:
+#                 print(f"HTTP error getting status: {status_response.status_code}")
+#                 print(f"Response content: {status_response.text}")
+                
+#         except requests.exceptions.RequestException as e:
+#             print(f"Network error calling webhook API: {e}")
+#         except Exception as e:
+#             print(f"Unexpected error: {e}")
+        
+#         # Wait before next check
+#         time.sleep(5)  # Check every 5 seconds
+    
+#     # Timeout reached
+#        elapsed = time.time() - start_time
+#        print(f"Timeout reached after {elapsed:.0f}s. Attempting to get partial responses...")
+    
+#     # Try to get whatever responses are available
+#        try:
+#         responses_response = requests.get(f"{webhook_base_url}/responses/{session_id}", timeout=10)
+#         if responses_response.status_code == 200:
+#             responses_data = responses_response.json()
+#             if responses_data.get("success"):
+#                 responses = responses_data.get("responses", [])
+#                 print(f"Retrieved {len(responses)} partial responses")
+#                 return responses
+#        except Exception as e:
+#         print(f"Failed to get partial responses: {e}")
+    
+#        print(f"No responses could be retrieved for session {session_id}")
+#        return []
+
