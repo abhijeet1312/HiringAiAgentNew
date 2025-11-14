@@ -543,8 +543,12 @@ class PreScreeningAgent:
                         "name": candidate_name,
                         "status": "call_failed",
                         "error": call_status["error"],
-                        "score": 0.0,
-                        "call_sid": call_sid
+                        # "score": 0.0,
+                         "resume_url": candidate.get("resume_url", "jmd"),
+                    "overall_score": 0.0,
+                        "call_sid": call_sid,
+                         "phone": candidate.get("phone"),
+                "email": candidate.get("email"),
                     })
                     continue
 
@@ -557,8 +561,10 @@ class PreScreeningAgent:
                         "name": candidate_name,
                         "status": "call_failed" if status == "failed" else "no_response",
                         "error": f"call_status_{status}",
-                        "score": 0.0,
-                        "call_sid": call_sid
+                         "resume_url": candidate.get("resume_url", "jmd"),
+                    "overall_score": 0.0,
+                     "phone": candidate.get("phone"),
+                "email": candidate.get("email"),
                     })
                     continue
 
@@ -577,6 +583,8 @@ class PreScreeningAgent:
                     "call_sid": call_sid,
                     "resume_url": candidate.get("resume_url", "jmd"),
                     "overall_score": 0.0,
+                     "phone": candidate.get("phone"),
+                "email": candidate.get("email"),
                 })
                 continue
             
