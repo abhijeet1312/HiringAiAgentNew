@@ -179,7 +179,7 @@ class PreScreeningAgent:
      """Generate job-specific screening questions using Azure OpenAI"""
     
      prompt = f"""
-     Generate exactly 2 specific screening questions for this job:
+     Generate exactly   strictly 5 specific screening questions for this job:
     
      Job Description: {job_description}
     
@@ -201,7 +201,7 @@ class PreScreeningAgent:
         
         response_text = response.choices[0].message.content
         questions = [q.strip() for q in response_text.split('\n') if q.strip()]
-        return questions[:3]  # Ensure exactly 3 questions
+        return questions # Ensure exactly 3 questions
         
      except Exception as e:
         print(f"Error generating questions: {e}")
@@ -342,6 +342,7 @@ class PreScreeningAgent:
      - Technical accuracy
      - Communication clarity
      - Experience depth
+     - If you find something in answer , treat it as 1 mark
     
      Return only a number between 0-10:
      """
@@ -365,103 +366,121 @@ class PreScreeningAgent:
      except Exception as e:
         print(f"Error evaluating answer: {e}")
         return 0.0
-      
-    
-#    
-    def wait_for_responses(self, session_id: str, num_questions: int, timeout: int = 90, webhook_base_url: str = "https://newaiprescreeningwebhook-dkcxc6d5e9ame4a2.centralindia-01.azurewebsites.net"):
-       """Wait for webhook responses by calling API endpoints instead of reading files."""
-       import requests
-       import time
-    
-       start_time = time.time()
-       print(f"Waiting for {num_questions} responses for session {session_id}...")
-       print(f"Using webhook URL: {webhook_base_url}")
-    
-       while (time.time() - start_time) < timeout:
-        try:
-            # Call the webhook API to get current status
-            status_response = requests.get(f"{webhook_base_url}/status/{session_id}", timeout=10)
-            
-            if status_response.status_code == 200:
-                status_data = status_response.json()
-                
-                if status_data.get("success"):
-                    completed_questions = status_data.get("completed_questions", 0)
-                    total_questions = status_data.get("total_questions", num_questions)
-                    progress = status_data.get("progress_percentage", 0)
-                    status = status_data.get("status", "unknown")
-                    
-                    print(f"Progress: {completed_questions}/{total_questions} ({progress:.1f}%) - Status: {status}")
-                    
-                    # Check if interview is completed
-                    if status == "completed" or completed_questions >= num_questions:
-                        print(f"Interview completed! Getting responses...")
-                        
-                        # Get all responses
-                        responses_response = requests.get(f"{webhook_base_url}/responses/{session_id}", timeout=10)
-                        
-                        if responses_response.status_code == 200:
-                            responses_data = responses_response.json()
-                            
-                            if responses_data.get("success"):
-                                responses = responses_data.get("responses", [])
-                                print(f"Successfully retrieved {len(responses)} responses!")
-                                
-                                # Clean up session from webhook memory
-                                try:
-                                    cleanup_response = requests.delete(f"{webhook_base_url}/session/{session_id}", timeout=5)
-                                    if cleanup_response.status_code == 200:
-                                        print(f"Session {session_id} cleaned up from webhook memory")
-                                except Exception as e:
-                                    print(f"Failed to cleanup session: {e}")
-                                
-                                return responses
-                            else:
-                                print(f"Failed to get responses: {responses_data.get('error', 'Unknown error')}")
+       
+       
+    def wait_for_responses(
+        self,
+        session_id: str,
+        num_questions: int,
+        webhook_base_url: str = "https://newaiprescreeningwebhook-dkcxc6d5e9ame4a2.centralindia-01.azurewebsites.net",
+        call_sid: str | None = None,
+    ):
+        import time, requests
+        from twilio.rest import Client
+
+        # Tunable values
+        HARD_TIMEOUT = 41                   # seconds before considering "no response" (increased)
+        SOFT_TIMEOUT_PER_Q = 40            # inactivity allowance per answered question
+        MAX_TIMEOUT = max(300, num_questions * SOFT_TIMEOUT_PER_Q)  # absolute cap (at least 5min)
+
+        start_time = time.time()
+        last_progress_time = time.time()
+        last_completed = 0
+
+        print(f"Waiting for {num_questions} responses for session {session_id}...")
+
+        while True:
+            elapsed = time.time() - start_time
+
+            # If no progress yet and elapsed exceeds HARD_TIMEOUT, check Twilio before quitting
+            if elapsed > HARD_TIMEOUT and last_completed == 0:
+                # If we have a call_sid, fetch Twilio status and only declare no-answer when Twilio is terminal
+                if call_sid:
+                    try:
+                        account_sid = os.getenv("TWILIO_ACCOUNT_SID")
+                        auth_token = os.getenv("TWILIO_AUTH_TOKEN")
+                        client = Client(account_sid, auth_token)
+                        call = client.calls(call_sid).fetch()
+                        tw_status = str(getattr(call, "status", "")).lower()
+                        print(f"Twilio call status (hard-timeout check): {tw_status}")
+                        if tw_status in ("failed", "no-answer", "busy", "canceled"):
+                            print("Twilio reports terminal status — treating as no_response.")
+                            return []
                         else:
-                            print(f"HTTP error getting responses: {responses_response.status_code}")
-                            print(f"Response content: {responses_response.text}")
-                    
-                    # Show progress every 30 seconds
-                    elapsed = time.time() - start_time
-                    if int(elapsed) % 30 == 0 and elapsed > 0:
-                        print(f"Still waiting... {elapsed:.0f}s elapsed")
-                
+                            # call still ringing/in-progress — give it more time
+                            print("Call still active according to Twilio — extending wait.")
+                            # bump last_progress_time so soft timeout doesn't trigger immediately
+                            last_progress_time = time.time()
+                            # keep waiting until MAX_TIMEOUT
+                    except Exception as e:
+                        print(f"Failed to fetch Twilio call status: {e}. Proceeding to treat as no_answer.")
+                        return []
                 else:
-                    print(f"Status API error: {status_data.get('error', 'Unknown error')}")
-            
-            else:
-                print(f"HTTP error getting status: {status_response.status_code}")
-                print(f"Response content: {status_response.text}")
-                
-        except requests.exceptions.RequestException as e:
-            print(f"Network error calling webhook API: {e}")
+                    # No call_sid to check -> be conservative and wait longer (extend hard timeout by doubling once)
+                    if elapsed < HARD_TIMEOUT * 2:
+                        print("No call_sid provided. Extending wait briefly before concluding no_response.")
+                        time.sleep(3)
+                        continue
+                    else:
+                        print("No call_sid and extended wait expired. Treating as no_response.")
+                        return []
+
+            # Soft timeout after some progress
+            if last_completed > 0 and (time.time() - last_progress_time) > SOFT_TIMEOUT_PER_Q:
+                print("Soft timeout — no new responses. Returning partial responses.")
+                break
+
+            # Absolute safety cap
+            if elapsed > MAX_TIMEOUT:
+                print("Max timeout reached, returning partial responses.")
+                break
+
+            # Poll webhook status
+            try:
+                status_resp = requests.get(f"{webhook_base_url}/status/{session_id}", timeout=8)
+                if status_resp.status_code != 200:
+                    time.sleep(2)
+                    continue
+
+                status_data = status_resp.json()
+                if not status_data.get("success"):
+                    time.sleep(2)
+                    continue
+
+                completed = status_data.get("completed_questions", 0)
+                status = status_data.get("status", "unknown")
+
+                print(f"Progress: {completed}/{num_questions} - Status: {status}")
+
+                # Update progress timer
+                if completed > last_completed:
+                    last_completed = completed
+                    last_progress_time = time.time()
+
+                # Interview fully completed
+                if status == "completed" or completed >= num_questions:
+                    break
+
+            except requests.exceptions.RequestException as e:
+                print("Webhook polling error:", e)
+            except Exception as e:
+                print("Unexpected error while polling webhook:", e)
+
+            time.sleep(2)
+
+        # Fetch responses (if any)
+        try:
+            resp = requests.get(f"{webhook_base_url}/responses/{session_id}", timeout=15)
+            if resp.status_code == 200 and resp.json().get("success"):
+                return resp.json().get("responses", [])
         except Exception as e:
-            print(f"Unexpected error: {e}")
+            print("Error fetching responses:", e)
+
+        return []
+
         
-        # Wait before next check
-        time.sleep(5)  # Check every 5 seconds
+    #    
     
-    # Timeout reached
-       elapsed = time.time() - start_time
-       print(f"Timeout reached after {elapsed:.0f}s. Attempting to get partial responses...")
-    
-    # Try to get whatever responses are available
-       try:
-        responses_response = requests.get(f"{webhook_base_url}/responses/{session_id}", timeout=10)
-        if responses_response.status_code == 200:
-            responses_data = responses_response.json()
-            if responses_data.get("success"):
-                responses = responses_data.get("responses", [])
-                print(f"Retrieved {len(responses)} partial responses")
-                return responses
-       except Exception as e:
-        print(f"Failed to get partial responses: {e}")
-    
-       print(f"No responses could be retrieved for session {session_id}")
-       return []
-
-
 
 # # Also add this helper method to your PreScreeningAgent class
     def check_call_status(self, call_sid: str) -> dict:
@@ -571,7 +590,11 @@ class PreScreeningAgent:
             
             # Wait for responses with longer timeout
             print(f"Waiting for {len(questions)} responses...")
-            responses = self.wait_for_responses(call_result.get("session_id"), len(questions), timeout=90)  # 5 minutes
+            num_questions=len(questions)
+            # print(f"Number of questions: {num_questions}--------------------hejbfejhrbf----------")
+            # responses = self.wait_for_responses(call_result.get("session_id"), num_questions, )  # 5 minutes
+            responses = self.wait_for_responses(call_result.get("session_id"), num_questions, call_sid=call_sid)
+
             
             if not responses:
                 print(f"No responses received for {candidate_name}")
