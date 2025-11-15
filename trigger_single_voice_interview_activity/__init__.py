@@ -37,7 +37,7 @@ def main(input_data: dict) -> str:
         results = agent.run_pre_screening(input_payload)
 
         if "error" in results:
-            return json.dumps({"error": results["error"]})
+         return {"error": results["error"]}
 
         all_results = results.get("all_results", [])
         result = all_results[0] if all_results else {"error": "No result returned"}
@@ -46,5 +46,6 @@ def main(input_data: dict) -> str:
 
     except Exception as e:
         logging.error(f"trigger_single_voice_interview_activity failed: {e}")
-        result = {"error": f"trigger_single_voice_interview_activity failed: {str(e)}"}
-        return json.dumps(result)
+        return {
+            "error": f"trigger_single_voice_interview_activity failed: {str(e)}"
+        }

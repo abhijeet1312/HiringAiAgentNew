@@ -567,7 +567,7 @@
 
 ##################----------------------
 
-#  def wait_for_responses(self, session_id: str, num_questions: int, timeout: int = 90, webhook_base_url: str = "https://newaiprescreeningwebhook-dkcxc6d5e9ame4a2.centralindia-01.azurewebsites.net"):
+# def wait_for_responses(self, session_id: str, num_questions: int, timeout: int = 90, webhook_base_url: str = "https://newaiprescreeningwebhook-dkcxc6d5e9ame4a2.centralindia-01.azurewebsites.net"):
 #        """Wait for webhook responses by calling API endpoints instead of reading files."""
 #        import requests
 #        import time
@@ -660,3 +660,291 @@
 #        print(f"No responses could be retrieved for session {session_id}")
 #        return []
 
+
+
+# def wait_for_responses(self, session_id: str, num_questions: int, timeout: int =45, webhook_base_url: str = "https://newaiprescreeningwebhook-dkcxc6d5e9ame4a2.centralindia-01.azurewebsites.net"):
+#        """Wait for webhook responses by calling API endpoints instead of reading files."""
+#        import requests
+#        import time
+    
+#        start_time = time.time()
+#        print(f"Waiting for {num_questions} responses for session {session_id}...")
+#        print(f"Using webhook URL: {webhook_base_url}")
+    
+#        while (time.time() - start_time) < timeout:
+#         try:
+#             # Call the webhook API to get current status
+#             status_response = requests.get(f"{webhook_base_url}/status/{session_id}", timeout=10)
+            
+#             if status_response.status_code == 200:
+#                 status_data = status_response.json()
+                
+#                 if status_data.get("success"):
+#                     completed_questions = status_data.get("completed_questions", 0)
+#                     total_questions = status_data.get("total_questions", num_questions)
+#                     progress = status_data.get("progress_percentage", 0)
+#                     status = status_data.get("status", "unknown")
+                    
+#                     print(f"Progress: {completed_questions}/{total_questions} ({progress:.1f}%) - Status: {status}")
+                    
+#                     # Check if interview is completed
+#                     if status == "completed" or completed_questions >= num_questions:
+#                         print(f"Interview completed! Getting responses...")
+                        
+#                         # Get all responses
+#                         responses_response = requests.get(f"{webhook_base_url}/responses/{session_id}", timeout=10)
+                        
+#                         if responses_response.status_code == 200:
+#                             responses_data = responses_response.json()
+                            
+#                             if responses_data.get("success"):
+#                                 responses = responses_data.get("responses", [])
+#                                 print(f"Successfully retrieved {len(responses)} responses!")
+                                
+#                                 # Clean up session from webhook memory
+#                                 try:
+#                                     cleanup_response = requests.delete(f"{webhook_base_url}/session/{session_id}", timeout=5)
+#                                     if cleanup_response.status_code == 200:
+#                                         print(f"Session {session_id} cleaned up from webhook memory")
+#                                 except Exception as e:
+#                                     print(f"Failed to cleanup session: {e}")
+                                
+#                                 return responses
+#                             else:
+#                                 print(f"Failed to get responses: {responses_data.get('error', 'Unknown error')}")
+#                         else:
+#                             print(f"HTTP error getting responses: {responses_response.status_code}")
+#                             print(f"Response content: {responses_response.text}")
+                    
+#                     # Show progress every 30 seconds
+#                     elapsed = time.time() - start_time
+#                     if int(elapsed) % 30 == 0 and elapsed > 0:
+#                         print(f"Still waiting... {elapsed:.0f}s elapsed")
+                
+#                 else:
+#                     print(f"Status API error: {status_data.get('error', 'Unknown error')}")
+            
+#             else:
+#                 print(f"HTTP error getting status: {status_response.status_code}")
+#                 print(f"Response content: {status_response.text}")
+                
+#         except requests.exceptions.RequestException as e:
+#             print(f"Network error calling webhook API: {e}")
+#         except Exception as e:
+#             print(f"Unexpected error: {e}")
+        
+#         # Wait before next check
+#         time.sleep(5)  # Check every 5 seconds
+    
+#     # Timeout reached
+#        elapsed = time.time() - start_time
+#        print(f"Timeout reached after {elapsed:.0f}s. Attempting to get partial responses...")
+    
+#     # Try to get whatever responses are available
+#        try:
+#         responses_response = requests.get(f"{webhook_base_url}/responses/{session_id}", timeout=10)
+#         if responses_response.status_code == 200:
+#             responses_data = responses_response.json()
+#             if responses_data.get("success"):
+#                 responses = responses_data.get("responses", [])
+#                 print(f"Retrieved {len(responses)} partial responses")
+#                 return responses
+#        except Exception as e:
+#         print(f"Failed to get partial responses: {e}")
+    
+#        print(f"No responses could be retrieved for session {session_id}")
+#        return []
+
+
+
+
+    # def run_pre_screening(self, input_data: str) -> Dict:
+    #   """Main pre-screening function with better error handling"""
+    #   print("Starting pre-screening process...")
+    #   try:
+    #     # Parse input
+    #     data = json.loads(input_data) if isinstance(input_data, str) else input_data
+    #     candidates = data.get("candidates", [])
+    #     job_description = data.get("job_description", "")
+        
+    #     if not candidates or not job_description:
+    #         return {"error": "Missing candidates or job description"}
+        
+    #     # Generate questions
+    #     print("Generating screening questions...")
+    #     questions = self.generate_screening_questions(job_description)
+    #     print(f"Generated {len(questions)} questions: {questions}")
+        
+    #     results = []
+        
+    #     for candidate in candidates:
+    #         candidate_name = candidate.get('name', 'Unknown')
+    #         candidate_id = candidate.get('id')
+            
+    #         print(f"\n{'='*50}")
+    #         print(f"Starting pre-screening for {candidate_name} (ID: {candidate_id})")
+    #         print(f"{'='*50}")
+            
+    #         # Trigger call
+    #         print("Initiating call...")
+    #         call_result = self.trigger_twilio_call(candidate, questions,"1234")
+    #         print (f"Call result: {call_result}")
+            
+    #         if "error" in call_result:
+    #             print(f"Call failed: {call_result['error']}")
+    #             results.append({
+    #                 "candidate_id": candidate_id,
+    #                 "name": candidate_name,
+    #                 "status": "call_failed",
+    #                 "error": call_result["error"],
+    #                 "score": 0.0
+    #             })
+    #             continue
+            
+    #         call_sid = call_result.get("call_sid")
+    #         print(f"Call initiated successfully. SID: {call_sid}")
+            
+    #         # Wait a bit for call to connect
+    #         print("Waiting for call to connect...")
+    #         time.sleep(10)
+            
+    #         # Check call status
+    #         if call_sid:
+    #             call_status = self.check_call_status(call_sid)
+    #             print(f"Call status: {call_status}")
+
+    #             # If check_call_status returned an error object, treat as failed
+    #             if call_status.get("error"):
+    #                 print(f"Call fetch error: {call_status['error']}")
+    #                 results.append({
+    #                     "candidate_id": candidate_id,
+    #                     "name": candidate_name,
+    #                     "status": "call_failed",
+    #                     "error": call_status["error"],
+    #                     # "score": 0.0,
+    #                      "resume_url": candidate.get("resume_url", "jmd"),
+    #                 "overall_score": 0.0,
+    #                     "call_sid": call_sid,
+    #                      "phone": candidate.get("phone"),
+    #             "email": candidate.get("email"),
+    #                 })
+    #                 continue
+
+    #             # Normalize status string (twilio statuses: queued, ringing, in-progress, completed, busy, failed, no-answer, canceled)
+    #             status = str(call_status.get("status", "")).lower()
+    #             print(f"Normalized call status: {status}")
+    #             if status in ("failed", "no-answer", "busy", "canceled"):
+    #                 print(f"Call ended with status '{status}'. Marking as call_failed/no_response.")
+    #                 results.append({
+    #                     "candidate_id": candidate_id,
+    #                     "name": candidate_name,
+    #                     "status": "call_failed" if status == "failed" else "no_response",
+    #                     "error": f"call_status_{status}",
+    #                      "resume_url": candidate.get("resume_url", "jmd"),
+    #                 "overall_score": 0.0,
+    #                  "phone": candidate.get("phone"),
+    #             "email": candidate.get("email"),
+    #                 })
+    #                 continue
+
+            
+    #         # Wait for responses with longer timeout
+    #         print(f"Waiting for {len(questions)} responses...")
+    #         num_questions=len(questions)
+    #         # print(f"Number of questions: {num_questions}--------------------hejbfejhrbf----------")
+    #         # responses = self.wait_for_responses(call_result.get("session_id"), num_questions, )  # 5 minutes
+    #         responses = self.wait_for_responses(call_result.get("session_id"), num_questions,timeout=200)
+
+            
+    #         if not responses:
+    #             print(f"No responses received for {candidate_name}")
+    #             results.append({
+    #                 "candidate_id": candidate_id,
+    #                 "name": candidate_name,
+    #                 "status": "no_response",
+    #                 "score": 0.0,
+    #                 "call_sid": call_sid,
+    #                 "resume_url": candidate.get("resume_url", "jmd"),
+    #                 "overall_score": 0.0,
+    #                  "phone": candidate.get("phone"),
+    #             "email": candidate.get("email"),
+    #             })
+    #             continue
+            
+    #         print(f"Received {len(responses)} responses, processing...")
+            
+    #         # Process responses
+    #         scores = []
+    #         transcripts = []
+            
+    #         for i, response in enumerate(responses):
+    #             if i < len(questions):
+    #                 audio_url = response.get("audio_url", "")
+    #                 if audio_url:
+    #                     print(f"Transcribing audio for question {i+1}...")
+    #                     transcript = self.transcribe_audio(audio_url)
+    #                     print(f"Transcript: {transcript[:100]}...")
+                        
+    #                     score = self.evaluate_answer(questions[i], transcript)
+    #                     print(f"Score for question {i+1}: {score}")
+                        
+    #                     scores.append(score)
+    #                     transcripts.append({
+    #                         "question": questions[i],
+    #                         "answer": transcript,
+    #                         "score": score
+    #                     })
+            
+    #         avg_score = sum(scores) / len(scores) if scores else 0.0
+    #         avg_score_new=avg_score/10
+    #         qualified = avg_score_new >= 2.0
+            
+    #         print(f"Final Results for {candidate_name}:")
+    #         print(f"   Average Score: {avg_score:.2f}/10")
+    #         print(f"   Qualified: {'YES' if qualified else 'NO'}")
+            
+    #         results.append({
+    #             "candidate_id": candidate_id,
+    #             "name": candidate_name,
+    #             "phone": candidate.get("phone"),
+    #             "email": candidate.get("email"),
+    #             "status": "completed",
+    #             "overall_score": round(avg_score, 2),
+    #             "individual_scores": scores,
+    #             "responses": transcripts,
+    #             "qualified": qualified,
+    #             "call_sid": call_sid,
+    #             "resume_url": candidate.get("resume_url", ""),
+    #             "job_description_url": data.get("job_description_url", "")
+    #         })
+        
+    #     # Sort by score (highest first)
+    #     qualified_candidates = sorted(
+    #         [r for r in results if r.get("qualified", False)],
+    #         key=lambda x: x.get("overall_score", 0),
+    #         reverse=True
+    #     )
+        
+    #     print(f"\n{'='*50}")
+    #     print("FINAL SCREENING RESULTS")
+    #     print(f"{'='*50}")
+    #     print(f"Total Candidates: {len(candidates)}")
+    #     print(f"Completed Screenings: {len([r for r in results if r['status'] == 'completed'])}")
+    #     print(f"Qualified Candidates: {len(qualified_candidates)}")
+        
+    #     return {
+    #         "status": "success",
+    #         "total_candidates": len(candidates),
+    #         "completed_screenings": len([r for r in results if r["status"] == "completed"]),
+    #         "qualified_count": len(qualified_candidates),
+    #         "qualified_candidates": qualified_candidates,
+    #         "all_results": results
+    #     }
+        
+    #   except Exception as e:
+    #     print(f"Pre-screening failed with error: {str(e)}")
+    #     import traceback
+    #     traceback.print_exc()
+    #     return {"error": f"Pre-screening failed: {str(e)}"}
+  
+    
