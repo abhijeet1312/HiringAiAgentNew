@@ -171,7 +171,7 @@ def orchestrator_function(context: df.DurableOrchestrationContext):
         "job_description": job_description_text,
         "chat_id": chat_id,
         "current_stage": "Resume Screening",
-        "next_stage": "Voice Interview"
+        "next_stage": "Automated Call Interviews",
     }
     
     screening_email_result = yield context.call_activity("send_final_emails_activity", screening_email_input)
@@ -211,7 +211,8 @@ def orchestrator_function(context: df.DurableOrchestrationContext):
             "score": item["overall_score"],
             "candidate_name": item.get("name", ""),
             "candidate_email": item.get("email", ""),
-            "candidate_phone": item.get("phone", "")
+            "candidate_phone": item.get("phone", ""),
+            "responses":item.get("responses", {})
         }
         for item in voice_results
     ]

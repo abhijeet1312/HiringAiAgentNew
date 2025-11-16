@@ -240,6 +240,7 @@ class PreScreeningAgent:
         
         # Build webhook URL with questions data
         webhook_url = f"https://newaiprescreeningwebhook-dkcxc6d5e9ame4a2.centralindia-01.azurewebsites.net/voice/{session_id}?questions={encoded_questions}&chat_id={chat_id}&candidate_id={candidate_id}"
+        # webhook_url = f"https://9c11f7a9ed5b.ngrok-free.app/voice/{session_id}?questions={encoded_questions}&chat_id={chat_id}&candidate_id={candidate_id}"
         
         # Initiate Twilio call
         call = client.calls.create(
@@ -522,7 +523,8 @@ class PreScreeningAgent:
                         "name": candidate_name,
                         "status": "call_failed",
                         "error": call_result["error"],
-                        "score": 0.0
+                        "score": 0.0,
+                        "questions": questions,
                     })
                     continue
 
@@ -552,6 +554,7 @@ class PreScreeningAgent:
                             "call_sid": call_sid,
                             "phone": candidate.get("phone"),
                             "email": candidate.get("email"),
+                            "questions": questions
                         })
                         continue
 
@@ -571,6 +574,7 @@ class PreScreeningAgent:
                             "overall_score": 0.0,
                             "phone": candidate.get("phone"),
                             "email": candidate.get("email"),
+                            "questions": questions,
                         })
                         continue
 
@@ -621,12 +625,14 @@ class PreScreeningAgent:
                             "overall_score": 0.0,
                             "phone": candidate.get("phone"),
                             "email": candidate.get("email"),
+                            "questions": questions
                         })
                         continue
 
                 # At this point the call was answered (in-progress/completed) — wait for webhook responses
                 print(f"Waiting for {len(questions)} responses...")
                 num_questions = len(questions)
+                # num_questions=2
                 # wait_for_responses will poll the webhook status endpoint for the session
                 responses = self.wait_for_responses(session_id, num_questions, timeout=200)
 
@@ -642,6 +648,7 @@ class PreScreeningAgent:
                         "overall_score": 0.0,
                         "phone": candidate.get("phone"),
                         "email": candidate.get("email"),
+                        "questions": questions
                     })
                     continue
 
@@ -687,7 +694,9 @@ class PreScreeningAgent:
                     "qualified": qualified,
                     "call_sid": call_sid,
                     "resume_url": candidate.get("resume_url", ""),
-                    "job_description_url": data.get("job_description_url", "")
+                    "job_description_url": data.get("job_description_url", ""),
+                    # "questions": questions,
+                    # "answers": responses
                 })
 
             # Sort by score (highest first)
@@ -769,7 +778,7 @@ if __name__ == "__main__":
     # Test data
     test_input = {
         "candidates": [
-            {"id": 1, "name": "John Doe", "phone": "8630793609", },
+            {"id": 1, "name": "John Doe", "phone": "8887596182", },
            
         ],
         "job_description": "Senior Python Developer with Django and PostgreSQL experience"
