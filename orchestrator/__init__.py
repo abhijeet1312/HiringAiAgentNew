@@ -190,7 +190,7 @@ def orchestrator_function(context: df.DurableOrchestrationContext):
     
     #time detay
     
-    yield context.create_timer(context.current_utc_datetime + timedelta(minutes=1))
+    yield context.create_timer(context.current_utc_datetime + timedelta(minutes=10))
 
     
     # PHASE 4: VOICE INTERVIEWS
