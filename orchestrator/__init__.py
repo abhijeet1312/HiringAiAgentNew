@@ -4,6 +4,7 @@ import azure.durable_functions as df
 from datetime import datetime
 from typing import List, Dict, Any
 from supabase_client import supabase
+from datetime import timedelta
 from shared.azurestorage import (
     azure_config,
     extract_text_from_azure,
@@ -51,11 +52,20 @@ def orchestrator_function(context: df.DurableOrchestrationContext):
     
     #excel file handling
         # --- Determine input type (Excel or PDF list) ---
+    # resume_input_urls = input_data.get("resume_urls", [])
+    # if isinstance(resume_input_urls, str):
+    #     resume_input_urls = [resume_input_urls]
+
+    # candidates = []
     resume_input_urls = input_data.get("resume_urls", [])
     if isinstance(resume_input_urls, str):
-        resume_input_urls = [resume_input_urls]
+      resume_input_urls = [resume_input_urls]
+
+# ✅ Minimal fix: ensure resume_urls always exists
+    resume_urls = list(resume_input_urls)
 
     candidates = []
+
 
     if not resume_input_urls:
         error_msg = "Missing resume input URL(s)"
@@ -176,6 +186,12 @@ def orchestrator_function(context: df.DurableOrchestrationContext):
     
     screening_email_result = yield context.call_activity("send_final_emails_activity", screening_email_input)
     logging.info(f"Screening emails sent: {screening_email_result}")
+    
+    
+    #time detay
+    
+    yield context.create_timer(context.current_utc_datetime + timedelta(minutes=10))
+
     
     # PHASE 4: VOICE INTERVIEWS
     logging.info("🎤 Starting voice interviews")
